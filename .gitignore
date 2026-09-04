@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+
+# Virtual environments
+venv/
+env/
+honeypot-env/
+.venv/
+
+# Honeypot runtime artifacts (generated at runtime, not source)
+honeypot.log
+honeypot.log.*
+web_output.log
+honeypot_output.log
+host_rsa_key
+host_rsa_key.pub
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Env vars
+.env

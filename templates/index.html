@@ -1,0 +1,1624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Honeypot · Security Dashboard</title>
+    <style>
+        /* ===== CSS Variables ===== */
+        :root {
+            --bg-primary: #0a0e17;
+            --bg-secondary: #0f1620;
+            --bg-card: #131d2a;
+            --bg-hover: #1a2a3a;
+            --border-color: #1a2a3a;
+            --border-light: #2a3a4a;
+            --text-primary: #e8edf5;
+            --text-secondary: #8899b0;
+            --text-muted: #4a5a6a;
+            --accent-blue: #4a9eff;
+            --accent-green: #4ade80;
+            --accent-red: #f87171;
+            --accent-orange: #fb923c;
+            --accent-purple: #a78bfa;
+            --accent-pink: #f472b6;
+            --accent-cyan: #67e8f9;
+            --shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+            --radius: 8px;
+            --transition: all 0.2s ease;
+            --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --font-mono: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        html, body {
+            height: 100vh;
+            overflow: hidden;
+            font-family: var(--font);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: var(--bg-secondary); }
+        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent-blue); }
+
+        /* ===== Header ===== */
+        .header {
+            padding: 10px 20px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+            height: 50px;
+        }
+
+        .header-left { display: flex; align-items: center; gap: 12px; }
+        .header-logo { display: flex; align-items: center; gap: 8px; }
+        .header-logo .logo-icon {
+            width: 28px; height: 28px;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            border-radius: 6px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px; color: #fff;
+        }
+        .header-logo h1 { font-size: 16px; font-weight: 600; letter-spacing: -0.5px; }
+        .header-logo h1 span { color: var(--text-secondary); font-weight: 400; }
+
+        .header-right { display: flex; align-items: center; gap: 12px; }
+        .status-badge {
+            display: flex; align-items: center; gap: 6px;
+            font-size: 10px; color: var(--text-secondary);
+            padding: 3px 10px; background: var(--bg-card);
+            border-radius: 14px; border: 1px solid var(--border-color);
+        }
+        .status-badge .dot {
+            width: 6px; height: 6px; border-radius: 50%;
+            background: var(--accent-green);
+            animation: pulse-dot 2s infinite;
+        }
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.8); }
+        }
+        .header-time { font-size: 11px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+
+        .header-btn {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 3px 10px;
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-size: 10px;
+            font-family: var(--font);
+            transition: var(--transition);
+        }
+        .header-btn:hover {
+            border-color: var(--accent-blue);
+            color: var(--text-primary);
+        }
+
+        /* ===== Stats Grid ===== */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+            padding: 6px 20px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            flex-shrink: 0;
+            height: 64px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            padding: 4px 8px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border-color);
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .stat-card:hover {
+            border-color: var(--accent-blue);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow);
+        }
+
+        .stat-card.active {
+            border-color: var(--accent-blue);
+            background: rgba(74, 158, 255, 0.08);
+            box-shadow: 0 0 20px rgba(74, 158, 255, 0.05);
+        }
+
+        .stat-card .number {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-primary);
+            display: block;
+            line-height: 1.2;
+        }
+
+        .stat-card .label {
+            font-size: 7px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            color: var(--text-muted);
+            margin-top: 1px;
+            font-weight: 500;
+        }
+
+        .stat-card .icon-bg {
+            position: absolute;
+            top: 2px; right: 4px;
+            font-size: 9px; opacity: 0.12;
+        }
+
+        .stat-card.success .number { color: var(--accent-green); }
+        .stat-card.danger .number { color: var(--accent-red); }
+        .stat-card.warning .number { color: var(--accent-orange); }
+        .stat-card.info .number { color: var(--accent-blue); }
+        .stat-card.purple .number { color: var(--accent-purple); }
+        .stat-card.pink .number { color: var(--accent-pink); }
+        .stat-card.cyan .number { color: var(--accent-cyan); }
+
+        /* ===== Attack Score ===== */
+        .attack-score {
+            background: var(--bg-card);
+            padding: 4px 12px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 11px;
+        }
+        .attack-score .score-bar {
+            width: 60px;
+            height: 4px;
+            background: var(--border-color);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .attack-score .score-bar .fill {
+            height: 100%;
+            border-radius: 2px;
+            transition: width 0.5s ease;
+            width: 0%;
+        }
+        .attack-score .score-bar .fill.low { background: var(--accent-green); }
+        .attack-score .score-bar .fill.medium { background: var(--accent-orange); }
+        .attack-score .score-bar .fill.high { background: var(--accent-red); }
+
+        /* ===== Filter Section ===== */
+        .filter-section {
+            padding: 5px 20px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+            flex-shrink: 0;
+            min-height: 38px;
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
+
+        .filter-group label {
+            font-size: 9px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .filter-group select,
+        .filter-group input {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 2px 8px;
+            border-radius: var(--radius);
+            font-size: 9px;
+            font-family: var(--font);
+            transition: var(--transition);
+            min-width: 70px;
+            height: 22px;
+        }
+
+        .filter-group select:focus,
+        .filter-group input:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.08);
+        }
+
+        .filter-group select option {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        .filter-group input {
+            min-width: 100px;
+        }
+
+        .filter-group input::placeholder {
+            color: var(--text-muted);
+            font-size: 9px;
+        }
+
+        .filter-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 1px 6px;
+            border-radius: 8px;
+            font-size: 8px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: var(--transition);
+            height: 18px;
+        }
+
+        .filter-badge:hover {
+            border-color: var(--accent-blue);
+            color: var(--text-primary);
+        }
+
+        .filter-badge .remove {
+            color: var(--text-muted);
+            margin-left: 2px;
+            font-size: 9px;
+        }
+
+        .filter-badge .remove:hover { color: var(--accent-red); }
+
+        .clear-filters-btn {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            padding: 2px 10px;
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-size: 9px;
+            font-family: var(--font);
+            transition: var(--transition);
+            height: 22px;
+            margin-left: auto;
+        }
+
+        .clear-filters-btn:hover {
+            border-color: var(--accent-red);
+            color: var(--accent-red);
+        }
+
+        #activeFilters {
+            display: flex;
+            gap: 3px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        /* ===== Main Layout - Fixed Height ===== */
+        .main-layout {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 0;
+            height: calc(100vh - 178px);
+            min-height: 250px;
+        }
+
+        /* ===== Left Panel - Commands ===== */
+        .commands-panel {
+            background: var(--bg-primary);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .panel-header {
+            padding: 4px 14px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+            min-height: 28px;
+        }
+
+        .panel-header .title {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .panel-header .title .badge {
+            font-size: 8px;
+            font-weight: 500;
+            padding: 1px 6px;
+            border-radius: 8px;
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+
+        .panel-header .count-info {
+            font-size: 10px;
+            color: var(--text-secondary);
+        }
+
+        .commands-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 3px 10px;
+            min-height: 0;
+        }
+
+        /* ===== Right Panel - Login Attempts ===== */
+        .auth-panel {
+            background: var(--bg-primary);
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .auth-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 3px 8px;
+            min-height: 0;
+        }
+
+        /* ===== Log Entries ===== */
+        .log-entry {
+            padding: 2px 6px;
+            margin-bottom: 2px;
+            border-radius: var(--radius);
+            font-family: var(--font-mono);
+            font-size: 9px;
+            border-left: 2px solid transparent;
+            animation: fadeIn 0.15s ease-out;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2px;
+            align-items: baseline;
+            transition: var(--transition);
+            line-height: 1.3;
+        }
+
+        .log-entry:hover { background: var(--bg-hover); }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-2px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Command Entries */
+        .log-entry.command {
+            border-left-color: var(--accent-purple);
+            background: rgba(167, 139, 250, 0.03);
+        }
+        .log-entry.command:hover { background: rgba(167, 139, 250, 0.06); }
+
+        /* Auth Entries */
+        .log-entry.auth-success {
+            border-left-color: var(--accent-green);
+            background: rgba(74, 222, 128, 0.03);
+        }
+        .log-entry.auth-success:hover { background: rgba(74, 222, 128, 0.06); }
+
+        .log-entry.auth-failed {
+            border-left-color: var(--accent-red);
+            background: rgba(248, 113, 113, 0.03);
+        }
+        .log-entry.auth-failed:hover { background: rgba(248, 113, 113, 0.06); }
+
+        .log-entry.auth-failed.bruteforce {
+            border-left-color: var(--accent-orange);
+            border-left-width: 3px;
+            background: rgba(251, 146, 60, 0.04);
+        }
+        .log-entry.auth-failed.bruteforce:hover { background: rgba(251, 146, 60, 0.08); }
+
+        /* Log Entry Parts */
+        .log-entry .time {
+            color: var(--text-muted);
+            font-size: 7px;
+            min-width: 70px;
+            font-feature-settings: "tnum";
+        }
+
+        .log-entry .flag {
+            font-size: 10px;
+            line-height: 1;
+        }
+
+        .log-entry .ip {
+            color: var(--accent-cyan);
+            font-weight: 500;
+            padding: 0 3px;
+            background: rgba(103, 232, 249, 0.06);
+            border-radius: 3px;
+            font-size: 8px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .log-entry .ip:hover {
+            background: rgba(103, 232, 249, 0.12);
+        }
+
+        .log-entry .username {
+            color: var(--accent-orange);
+            font-weight: 500;
+        }
+
+        .log-entry .password {
+            color: var(--accent-pink);
+            background: rgba(244, 114, 182, 0.06);
+            padding: 0 3px;
+            border-radius: 3px;
+            font-size: 8px;
+        }
+
+        .log-entry .status {
+            font-weight: 500;
+            font-size: 7px;
+            padding: 0 4px;
+            border-radius: 6px;
+        }
+
+        .log-entry .status.success {
+            background: rgba(74, 222, 128, 0.1);
+            color: var(--accent-green);
+        }
+
+        .log-entry .status.failed {
+            background: rgba(248, 113, 113, 0.1);
+            color: var(--accent-red);
+        }
+
+        .log-entry .cmd-text {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.03);
+            padding: 0 4px;
+            border-radius: 3px;
+            word-break: break-all;
+            font-size: 9px;
+        }
+
+        .log-entry .cmd-label {
+            color: var(--text-muted);
+            font-size: 7px;
+            opacity: 0.4;
+        }
+
+        .log-entry .bf-badge {
+            background: var(--accent-orange);
+            color: #000;
+            font-weight: 600;
+            font-size: 5px;
+            padding: 0 4px;
+            border-radius: 4px;
+            animation: pulse-badge 1.5s infinite;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        @keyframes pulse-badge {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* ===== Pattern Cards ===== */
+        .patterns-section {
+            padding: 4px 20px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            flex-shrink: 0;
+            height: 56px;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            overflow-x: auto;
+        }
+
+        .pattern-card {
+            background: var(--bg-card);
+            padding: 4px 10px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border-color);
+            min-width: 120px;
+            flex-shrink: 0;
+        }
+
+        .pattern-card .label {
+            font-size: 7px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .pattern-card .value {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .pattern-card .value .count {
+            font-size: 9px;
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+
+        /* ===== Empty State ===== */
+        .empty-state {
+            text-align: center;
+            padding: 20px 12px;
+            color: var(--text-muted);
+        }
+
+        .empty-state .icon { font-size: 20px; margin-bottom: 6px; opacity: 0.3; }
+        .empty-state p { font-size: 10px; }
+        .empty-state .sub { font-size: 8px; margin-top: 2px; opacity: 0.5; }
+
+        /* ===== Notification ===== */
+        .notification-container {
+            position: fixed;
+            top: 60px;
+            right: 16px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-width: 320px;
+            width: 100%;
+            pointer-events: none;
+        }
+
+        .notification {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius);
+            padding: 10px 14px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+            animation: slideInRight 0.4s ease;
+            pointer-events: all;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            position: relative;
+            border-left: 3px solid var(--accent-orange);
+        }
+
+        @keyframes slideInRight {
+            from { transform: translateX(120%) scale(0.95); opacity: 0; }
+            to { transform: translateX(0) scale(1); opacity: 1; }
+        }
+
+        @keyframes slideOutRight {
+            from { transform: translateX(0) scale(1); opacity: 1; }
+            to { transform: translateX(120%) scale(0.95); opacity: 0; }
+        }
+
+        .notification.closing {
+            animation: slideOutRight 0.3s ease forwards;
+        }
+
+        .notification .progress-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--accent-orange), var(--accent-red));
+            border-radius: 0 0 var(--radius) var(--radius);
+            animation: progressShrink 5s linear forwards;
+        }
+
+        @keyframes progressShrink {
+            from { width: 100%; }
+            to { width: 0%; }
+        }
+
+        .notification-header {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 2px;
+        }
+
+        .notification-icon { font-size: 14px; animation: shake 0.5s infinite; }
+        @keyframes shake {
+            0%, 100% { transform: rotate(0); }
+            25% { transform: rotate(-6deg); }
+            75% { transform: rotate(6deg); }
+        }
+
+        .notification-title {
+            color: var(--accent-orange);
+            font-weight: 600;
+            font-size: 11px;
+        }
+
+        .notification-title .count {
+            background: var(--accent-orange);
+            color: #000;
+            padding: 0 5px;
+            border-radius: 4px;
+            font-size: 8px;
+            font-weight: 700;
+            margin-left: 3px;
+        }
+
+        .notification-body {
+            color: var(--text-secondary);
+            font-size: 10px;
+            line-height: 1.4;
+            margin-bottom: 4px;
+        }
+
+        .notification-body .highlight-ip {
+            color: var(--accent-cyan);
+            cursor: pointer;
+            font-weight: 500;
+            padding: 0 4px;
+            background: rgba(103, 232, 249, 0.06);
+            border-radius: 3px;
+            transition: var(--transition);
+        }
+
+        .notification-body .highlight-ip:hover {
+            background: rgba(103, 232, 249, 0.12);
+        }
+
+        .notification-body .highlight-count {
+            color: var(--accent-red);
+            font-weight: 600;
+        }
+
+        .notification-body .sub-text {
+            font-size: 8px;
+            color: var(--text-muted);
+            display: block;
+            margin-top: 1px;
+        }
+
+        .notification-actions {
+            display: flex;
+            gap: 4px;
+            margin-top: 3px;
+        }
+
+        .notification-btn {
+            padding: 2px 10px;
+            border: none;
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-size: 9px;
+            font-family: var(--font);
+            font-weight: 500;
+            transition: var(--transition);
+        }
+
+        .notification-btn.investigate {
+            background: var(--accent-blue);
+            color: #fff;
+        }
+
+        .notification-btn.investigate:hover {
+            background: #3a8aee;
+            transform: scale(1.02);
+        }
+
+        .notification-btn.dismiss {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+
+        .notification-btn.dismiss:hover {
+            border-color: var(--text-secondary);
+            color: var(--text-primary);
+        }
+
+        .notification .close-btn {
+            position: absolute;
+            top: 4px;
+            right: 6px;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 12px;
+            cursor: pointer;
+            transition: var(--transition);
+            padding: 1px 3px;
+            border-radius: 3px;
+        }
+
+        .notification .close-btn:hover {
+            color: var(--accent-red);
+            background: rgba(248, 113, 113, 0.05);
+        }
+
+        .notification-timestamp {
+            font-size: 7px;
+            color: var(--text-muted);
+            margin-top: 1px;
+            opacity: 0.4;
+        }
+
+        /* ===== Responsive ===== */
+        @media (max-width: 1200px) {
+            .stats-grid { grid-template-columns: repeat(4, 1fr); height: auto; padding: 4px 12px; }
+            .main-layout { grid-template-columns: 1fr 260px; }
+            .stat-card { padding: 3px 6px; }
+            .stat-card .number { font-size: 14px; }
+            .patterns-section { height: auto; padding: 4px 12px; flex-wrap: wrap; }
+            .pattern-card { min-width: 80px; }
+        }
+
+        @media (max-width: 992px) {
+            .main-layout { grid-template-columns: 1fr; height: auto; }
+            .auth-panel {
+                max-height: 250px;
+                border-top: 1px solid var(--border-color);
+            }
+            .commands-panel {
+                max-height: 45vh;
+            }
+            .stats-grid { grid-template-columns: repeat(4, 1fr); }
+            .patterns-section { height: auto; flex-wrap: wrap; }
+        }
+
+        @media (max-width: 768px) {
+            .stats-grid { grid-template-columns: repeat(3, 1fr); gap: 3px; padding: 3px 8px; }
+            .stat-card { padding: 3px 4px; }
+            .stat-card .number { font-size: 12px; }
+            .stat-card .label { font-size: 6px; }
+            .header { padding: 6px 12px; height: auto; flex-wrap: wrap; }
+            .header-logo h1 { font-size: 13px; }
+            .header-logo h1 span { display: none; }
+            .header-time { display: none; }
+            .filter-section { padding: 3px 8px; flex-direction: column; align-items: stretch; min-height: auto; }
+            .filter-group { flex-wrap: wrap; }
+            .filter-group select, .filter-group input { min-width: 50px; font-size: 8px; height: 18px; padding: 1px 5px; }
+            .filter-group input { min-width: 60px; }
+            .clear-filters-btn { margin-left: 0; }
+            .commands-container { padding: 2px 6px; }
+            .auth-container { padding: 2px 6px; }
+            .log-entry { font-size: 8px; padding: 2px 4px; }
+            .log-entry .time { min-width: 50px; font-size: 6px; }
+            .panel-header { padding: 3px 8px; min-height: 22px; }
+            .panel-header .title { font-size: 9px; }
+            .notification-container { max-width: 95%; right: 6px; top: 50px; }
+            .main-layout { height: calc(100vh - 160px); }
+            .patterns-section { height: auto; padding: 3px 8px; gap: 4px; }
+            .pattern-card { min-width: 60px; padding: 2px 6px; }
+            .pattern-card .label { font-size: 6px; }
+            .pattern-card .value { font-size: 9px; }
+            .attack-score { font-size: 9px; padding: 2px 8px; }
+            .attack-score .score-bar { width: 40px; }
+        }
+
+        @media (max-width: 480px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .header-right .status-badge { font-size: 8px; padding: 2px 6px; }
+            .main-layout { height: calc(100vh - 180px); }
+        }
+    </style>
+</head>
+<body>
+    <!-- ===== Header ===== -->
+    <header class="header">
+        <div class="header-left">
+            <div class="header-logo">
+                <div class="logo-icon">🛡</div>
+                <h1>Honeypot <span>· Security</span></h1>
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="attack-score" id="attackScore">
+                🎯 Attack Score
+                <span id="scoreValue" style="font-weight:700;color:var(--accent-orange);">0</span>
+                <div class="score-bar">
+                    <div class="fill" id="scoreFill" style="width:0%;"></div>
+                </div>
+            </div>
+            <button class="header-btn" onclick="exportLogs('csv')">📥 Export</button>
+            <button class="header-btn" onclick="clearAllFilters()">✕ Clear</button>
+            <span class="status-badge">
+                <span class="dot"></span>
+                <span id="statusText">Live</span>
+            </span>
+            <span class="header-time" id="headerTime">--:--:--</span>
+        </div>
+    </header>
+
+    <!-- ===== Stats Grid ===== -->
+    <div class="stats-grid" id="statsGrid">
+        <div class="stat-card info active" data-filter="all" onclick="applyFilter('all')">
+            <span class="icon-bg">📊</span>
+            <span class="number" id="totalLogs">0</span>
+            <span class="label">Total</span>
+        </div>
+        <div class="stat-card success" data-filter="success" onclick="applyFilter('success')">
+            <span class="icon-bg">✓</span>
+            <span class="number" id="successfulLogins">0</span>
+            <span class="label">Success</span>
+        </div>
+        <div class="stat-card danger" data-filter="failed" onclick="applyFilter('failed')">
+            <span class="icon-bg">✗</span>
+            <span class="number" id="failedLogins">0</span>
+            <span class="label">Failed</span>
+        </div>
+        <div class="stat-card warning" data-filter="commands" onclick="applyFilter('commands')">
+            <span class="icon-bg">⌨</span>
+            <span class="number" id="totalCommands">0</span>
+            <span class="label">Commands</span>
+        </div>
+        <div class="stat-card purple" data-filter="auth" onclick="applyFilter('auth')">
+            <span class="icon-bg">🔑</span>
+            <span class="number" id="totalAuth">0</span>
+            <span class="label">Auth</span>
+        </div>
+        <div class="stat-card cyan" data-filter="bruteforce" onclick="applyFilter('bruteforce')">
+            <span class="icon-bg">⚡</span>
+            <span class="number" id="bruteforceCount">0</span>
+            <span class="label">Brute Force</span>
+        </div>
+        <div class="stat-card pink" data-filter="unique" onclick="applyFilter('unique')">
+            <span class="icon-bg">🌐</span>
+            <span class="number" id="uniqueIPs">0</span>
+            <span class="label">Attackers</span>
+        </div>
+    </div>
+
+    <!-- ===== Patterns Section ===== -->
+    <div class="patterns-section" id="patternsSection">
+        <div class="pattern-card">
+            <div class="label">🎯 Top Username</div>
+            <div class="value" id="topUsername">—</div>
+        </div>
+        <div class="pattern-card">
+            <div class="label">🔑 Top Password</div>
+            <div class="value" id="topPassword">—</div>
+        </div>
+        <div class="pattern-card">
+            <div class="label">🌍 Top Country</div>
+            <div class="value" id="topCountry">—</div>
+        </div>
+        <div class="pattern-card">
+            <div class="label">⚡ Attack Types</div>
+            <div class="value" id="attackTypes">—</div>
+        </div>
+        <div class="pattern-card">
+            <div class="label">📊 Activity</div>
+            <div class="value" id="activityInfo">—</div>
+        </div>
+    </div>
+
+    <!-- ===== Filter Section ===== -->
+    <div class="filter-section" id="filterSection">
+        <div class="filter-group">
+            <label>🔍</label>
+            <input type="text" id="searchInput" placeholder="Search..." oninput="applyAllFilters()">
+        </div>
+        
+        <div class="filter-group">
+            <label>Type</label>
+            <select id="typeFilter" onchange="applyAllFilters()">
+                <option value="all">All</option>
+                <option value="auth">Auth</option>
+                <option value="command">Commands</option>
+            </select>
+        </div>
+        
+        <div class="filter-group">
+            <label>Status</label>
+            <select id="statusFilter" onchange="applyAllFilters()">
+                <option value="all">All</option>
+                <option value="SUCCESS">✓ Success</option>
+                <option value="FAILED">✗ Failed</option>
+            </select>
+        </div>
+        
+        <div class="filter-group">
+            <label>IP</label>
+            <select id="ipFilter" onchange="applyAllFilters()">
+                <option value="all">All IPs</option>
+            </select>
+        </div>
+        
+        <div class="filter-group">
+            <label>Sort</label>
+            <select id="sortFilter" onchange="applyAllFilters()">
+                <option value="newest">Newest</option>
+                <option value="oldest">Oldest</option>
+            </select>
+        </div>
+
+        <div id="activeFilters"></div>
+    </div>
+
+    <!-- ===== Main Layout ===== -->
+    <div class="main-layout">
+        <!-- Left Panel - Commands -->
+        <div class="commands-panel">
+            <div class="panel-header">
+                <div class="title">
+                    💻 Commands
+                    <span class="badge" id="cmdBadge">0</span>
+                </div>
+                <span class="count-info" id="cmdCountInfo">0</span>
+            </div>
+            <div class="commands-container" id="commandsContainer">
+                <div class="empty-state">
+                    <div class="icon">⌨</div>
+                    <p>No commands</p>
+                    <p class="sub">Command logs appear here</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel - Login Attempts -->
+        <div class="auth-panel">
+            <div class="panel-header">
+                <div class="title">
+                    🔑 Login Attempts
+                    <span class="badge" id="authBadge">0</span>
+                </div>
+                <span class="count-info">
+                    <span style="color:var(--accent-green);" id="authSuccessSmall">0</span>
+                    /
+                    <span style="color:var(--accent-red);" id="authFailedSmall">0</span>
+                </span>
+            </div>
+            <div class="auth-container" id="authContainer">
+                <div class="empty-state">
+                    <div class="icon">🔐</div>
+                    <p>No login attempts</p>
+                    <p class="sub">Authentication events appear here</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== Notifications ===== -->
+    <div class="notification-container" id="notificationContainer"></div>
+
+    <script>
+        // ===== Configuration =====
+        const CONFIG = {
+            bruteForceThreshold: 5,
+            bruteForceWindow: 120,
+            maxLogs: 2000
+        };
+
+        // ===== State =====
+        let allLogs = [];
+        let filteredLogs = [];
+        let bruteforceIPs = new Set();
+        let notifiedIPs = new Set();
+        let notifiedTimestamps = {};
+        let activeNotifications = new Set();
+        let notificationTimers = {};
+        let eventSource = null;
+        let filterTimeout = null;
+        let activeFilter = 'all';
+        let selectedIP = null;
+        let patterns = {};
+
+        // ===== Utility Functions =====
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function formatTime(iso) {
+            if (!iso) return '';
+            try {
+                const d = new Date(iso);
+                return d.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            } catch { return iso; }
+        }
+
+        function getIPStats(ip) {
+            const logs = allLogs.filter(l => l.ip === ip);
+            return {
+                attempts: logs.filter(l => l.type === 'auth').length,
+                success: logs.filter(l => l.type === 'auth' && l.status === 'SUCCESS').length,
+                failed: logs.filter(l => l.type === 'auth' && l.status === 'FAILED').length,
+                commands: logs.filter(l => l.type === 'command').length,
+                total: logs.length,
+                isBruteforce: bruteforceIPs.has(ip)
+            };
+        }
+
+        // ===== Brute Force Detection with Cooldown =====
+        function detectBruteforce() {
+            bruteforceIPs.clear();
+            const failed = {};
+
+            allLogs.forEach(log => {
+                if (log.type === 'auth' && log.status === 'FAILED') {
+                    if (!failed[log.ip]) failed[log.ip] = [];
+                    failed[log.ip].push(log);
+                }
+            });
+
+            const newBruteforceIPs = new Set();
+            
+            for (const [ip, attempts] of Object.entries(failed)) {
+                attempts.sort((a, b) => (a.timestamp || '').localeCompare(b.timestamp || ''));
+                for (let i = 0; i < attempts.length; i++) {
+                    const start = new Date(attempts[i].timestamp);
+                    let count = 1;
+                    for (let j = i + 1; j < attempts.length; j++) {
+                        const diff = (new Date(attempts[j].timestamp) - start) / 1000;
+                        if (diff <= CONFIG.bruteForceWindow) count++;
+                        else break;
+                    }
+                    if (count >= CONFIG.bruteForceThreshold) {
+                        bruteforceIPs.add(ip);
+                        newBruteforceIPs.add(ip);
+                        break;
+                    }
+                }
+            }
+
+            document.getElementById('bruteforceCount').textContent = bruteforceIPs.size;
+
+            // Only show notification for new attacks or if cooldown has passed
+            newBruteforceIPs.forEach(ip => {
+                const notifId = 'notif-' + ip.replace(/\./g, '-');
+                const isActive = document.getElementById(notifId) !== null;
+                
+                // Check cooldown (1 minute)
+                const lastNotified = notifiedTimestamps[ip] || 0;
+                const timeSinceLastNotified = Date.now() - lastNotified;
+                const cooldownPeriod = 60000; // 1 minute
+                
+                if (!isActive && (timeSinceLastNotified > cooldownPeriod || !notifiedIPs.has(ip))) {
+                    showNotification(ip);
+                    notifiedIPs.add(ip);
+                    notifiedTimestamps[ip] = Date.now();
+                }
+            });
+            
+            // Clean up IPs that are no longer attacking
+            notifiedIPs.forEach(ip => {
+                if (!bruteforceIPs.has(ip)) {
+                    const timeSinceLastNotified = Date.now() - (notifiedTimestamps[ip] || 0);
+                    // Only remove from notified set after cooldown period
+                    if (timeSinceLastNotified > 60000) {
+                        notifiedIPs.delete(ip);
+                        delete notifiedTimestamps[ip];
+                    }
+                }
+            });
+        }
+
+        // ===== Notifications =====
+        function showNotification(ip) {
+            const container = document.getElementById('notificationContainer');
+            const stats = getIPStats(ip);
+            const id = 'notif-' + ip.replace(/\./g, '-');
+
+            // Check if notification already exists
+            const existing = document.getElementById(id);
+            if (existing) {
+                // Reset the timer
+                if (notificationTimers[ip]) {
+                    clearTimeout(notificationTimers[ip]);
+                }
+                return;
+            }
+
+            const el = document.createElement('div');
+            el.className = 'notification';
+            el.id = id;
+            el.innerHTML = `
+                <div class="progress-bar"></div>
+                <button class="close-btn" onclick="dismissNotification('${ip}')">×</button>
+                <div class="notification-header">
+                    <span class="notification-icon">⚡</span>
+                    <span class="notification-title">
+                        Brute Force Detected
+                        <span class="count">${stats.failed}</span>
+                    </span>
+                </div>
+                <div class="notification-body">
+                    IP <span class="highlight-ip" onclick="filterByIP('${ip}')">${ip}</span>
+                    has <span class="highlight-count">${stats.failed}</span> failed attempts
+                    <span class="sub-text">${stats.attempts} total · ${stats.success} success</span>
+                </div>
+                <div class="notification-actions">
+                    <button class="notification-btn investigate" onclick="investigateIP('${ip}')">🔍 Investigate</button>
+                    <button class="notification-btn dismiss" onclick="dismissNotification('${ip}')">Dismiss</button>
+                </div>
+                <div class="notification-timestamp">${new Date().toLocaleTimeString()}</div>
+            `;
+
+            container.appendChild(el);
+            activeNotifications.add(ip);
+
+            // Auto-dismiss after 5 seconds
+            const timeoutId = setTimeout(() => {
+                dismissNotification(ip);
+            }, 5000);
+            
+            notificationTimers[ip] = timeoutId;
+            el.dataset.timeoutId = timeoutId;
+        }
+
+        function dismissNotification(ip) {
+            const el = document.getElementById('notif-' + ip.replace(/\./g, '-'));
+            if (el) {
+                // Clear the auto-dismiss timeout
+                if (notificationTimers[ip]) {
+                    clearTimeout(notificationTimers[ip]);
+                    delete notificationTimers[ip];
+                }
+                el.classList.add('closing');
+                setTimeout(() => {
+                    if (el.parentNode) {
+                        el.remove();
+                    }
+                }, 300);
+            }
+            activeNotifications.delete(ip);
+        }
+
+        function investigateIP(ip) {
+            filterByIP(ip);
+            dismissNotification(ip);
+            // Remove from notified set so it can trigger again if needed
+            notifiedIPs.delete(ip);
+            delete notifiedTimestamps[ip];
+        }
+
+        // ===== Filter Functions =====
+        function applyFilter(filter) {
+            activeFilter = filter;
+            
+            document.querySelectorAll('.stat-card').forEach(card => {
+                card.classList.remove('active');
+                if (card.dataset.filter === filter) {
+                    card.classList.add('active');
+                }
+            });
+
+            if (filter === 'all') {
+                document.getElementById('typeFilter').value = 'all';
+                document.getElementById('statusFilter').value = 'all';
+            } else if (filter === 'success') {
+                document.getElementById('typeFilter').value = 'auth';
+                document.getElementById('statusFilter').value = 'SUCCESS';
+            } else if (filter === 'failed') {
+                document.getElementById('typeFilter').value = 'auth';
+                document.getElementById('statusFilter').value = 'FAILED';
+            } else if (filter === 'commands') {
+                document.getElementById('typeFilter').value = 'command';
+                document.getElementById('statusFilter').value = 'all';
+            } else if (filter === 'auth') {
+                document.getElementById('typeFilter').value = 'auth';
+                document.getElementById('statusFilter').value = 'all';
+            } else if (filter === 'bruteforce') {
+                document.getElementById('typeFilter').value = 'auth';
+                document.getElementById('statusFilter').value = 'FAILED';
+                if (bruteforceIPs.size > 0) {
+                    const firstIP = Array.from(bruteforceIPs)[0];
+                    document.getElementById('ipFilter').value = firstIP;
+                    selectedIP = firstIP;
+                }
+            } else if (filter === 'unique') {
+                document.getElementById('typeFilter').value = 'all';
+                document.getElementById('statusFilter').value = 'all';
+            }
+
+            applyAllFilters();
+        }
+
+        function filterByIP(ip) {
+            document.getElementById('ipFilter').value = ip;
+            selectedIP = ip;
+            applyAllFilters();
+        }
+
+        function updateIPSelector() {
+            const selector = document.getElementById('ipFilter');
+            const current = selector.value;
+            const ips = new Set();
+            allLogs.forEach(l => { if (l.ip) ips.add(l.ip); });
+
+            let html = '<option value="all">All IPs</option>';
+            Array.from(ips).sort().forEach(ip => {
+                const stats = getIPStats(ip);
+                const bf = bruteforceIPs.has(ip) ? ' ⚡' : '';
+                html += `<option value="${ip}">${ip} (${stats.attempts}${bf})</option>`;
+            });
+
+            selector.innerHTML = html;
+            if (current !== 'all' && ips.has(current)) {
+                selector.value = current;
+                selectedIP = current;
+            } else if (selectedIP && ips.has(selectedIP)) {
+                selector.value = selectedIP;
+            } else {
+                selector.value = 'all';
+                selectedIP = null;
+            }
+        }
+
+        function applyAllFilters() {
+            clearTimeout(filterTimeout);
+            filterTimeout = setTimeout(() => {
+                const search = document.getElementById('searchInput').value.toLowerCase();
+                const type = document.getElementById('typeFilter').value;
+                const status = document.getElementById('statusFilter').value;
+                const ip = document.getElementById('ipFilter').value;
+                const sort = document.getElementById('sortFilter').value;
+
+                let logs = [...allLogs];
+
+                if (ip !== 'all') {
+                    logs = logs.filter(l => l.ip === ip);
+                    selectedIP = ip;
+                } else {
+                    selectedIP = null;
+                }
+
+                if (type !== 'all') {
+                    logs = logs.filter(l => l.type === type);
+                }
+
+                if (status !== 'all') {
+                    logs = logs.filter(l => l.status === status);
+                }
+
+                if (search) {
+                    logs = logs.filter(l =>
+                        (l.ip || '').toLowerCase().includes(search) ||
+                        (l.username || '').toLowerCase().includes(search) ||
+                        (l.command || '').toLowerCase().includes(search) ||
+                        (l.password || '').toLowerCase().includes(search)
+                    );
+                }
+
+                logs.sort((a, b) => sort === 'newest'
+                    ? (b.timestamp || '').localeCompare(a.timestamp || '')
+                    : (a.timestamp || '').localeCompare(b.timestamp || '')
+                );
+
+                filteredLogs = logs;
+                renderAll();
+                updateActiveFilters();
+            }, 300);
+        }
+
+        function updateActiveFilters() {
+            const container = document.getElementById('activeFilters');
+            const filters = [];
+
+            const type = document.getElementById('typeFilter').value;
+            const status = document.getElementById('statusFilter').value;
+            const ip = document.getElementById('ipFilter').value;
+            const search = document.getElementById('searchInput').value;
+
+            if (type !== 'all') filters.push({ label: type, key: 'type' });
+            if (status !== 'all') filters.push({ label: status, key: 'status' });
+            if (ip !== 'all') filters.push({ label: 'IP: ' + ip, key: 'ip' });
+            if (search) filters.push({ label: '🔍 "' + search + '"', key: 'search' });
+
+            if (filters.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+
+            container.innerHTML = filters.map(f => `
+                <span class="filter-badge">
+                    ${f.label}
+                    <span class="remove" onclick="removeFilter('${f.key}')">×</span>
+                </span>
+            `).join('');
+        }
+
+        function removeFilter(key) {
+            if (key === 'type') document.getElementById('typeFilter').value = 'all';
+            else if (key === 'status') document.getElementById('statusFilter').value = 'all';
+            else if (key === 'ip') {
+                document.getElementById('ipFilter').value = 'all';
+                selectedIP = null;
+            } else if (key === 'search') document.getElementById('searchInput').value = '';
+            applyAllFilters();
+        }
+
+        function clearAllFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('typeFilter').value = 'all';
+            document.getElementById('statusFilter').value = 'all';
+            document.getElementById('ipFilter').value = 'all';
+            document.getElementById('sortFilter').value = 'newest';
+            selectedIP = null;
+            activeFilter = 'all';
+            
+            document.querySelectorAll('.stat-card').forEach(card => {
+                card.classList.remove('active');
+                if (card.dataset.filter === 'all') card.classList.add('active');
+            });
+            
+            applyAllFilters();
+        }
+
+        // ===== Export =====
+        function exportLogs(format) {
+            window.location.href = `/api/export?format=${format}&limit=1000`;
+        }
+
+        // ===== Patterns =====
+        async function fetchPatterns() {
+            try {
+                const response = await fetch('/api/patterns');
+                patterns = await response.json();
+                updatePatterns();
+            } catch (e) {}
+        }
+
+        function updatePatterns() {
+            // Top Username
+            const topUser = Object.keys(patterns.top_usernames || {})[0] || '—';
+            const userCount = patterns.top_usernames ? patterns.top_usernames[topUser] : 0;
+            document.getElementById('topUsername').textContent = topUser !== '—' ? `${topUser} (${userCount})` : '—';
+
+            // Top Password
+            const topPass = Object.keys(patterns.top_passwords || {})[0] || '—';
+            const passCount = patterns.top_passwords ? patterns.top_passwords[topPass] : 0;
+            document.getElementById('topPassword').textContent = topPass !== '—' ? `${topPass} (${passCount})` : '—';
+
+            // Top Country
+            const geo = patterns.geo_distribution || {};
+            const topCountry = Object.keys(geo)[0] || '—';
+            const countryCount = geo[topCountry] || 0;
+            document.getElementById('topCountry').textContent = topCountry !== '—' ? `${topCountry} (${countryCount})` : '—';
+
+            // Attack Types
+            const types = patterns.attack_types || {};
+            let typeStr = [];
+            if (types.bruteforce > 0) typeStr.push(`💪${types.bruteforce}`);
+            if (types.dictionary > 0) typeStr.push(`📚${types.dictionary}`);
+            if (types.password_spray > 0) typeStr.push(`💦${types.password_spray}`);
+            document.getElementById('attackTypes').textContent = typeStr.length ? typeStr.join(' ') : '—';
+
+            // Activity
+            const total = patterns.total_auth || 0;
+            const success = patterns.total_success || 0;
+            const failed = patterns.total_failed || 0;
+            document.getElementById('activityInfo').textContent = `${total} total · ${success}✓ ${failed}✗`;
+
+            // Attack Score
+            const score = patterns.attack_score || 0;
+            document.getElementById('scoreValue').textContent = score;
+            const fill = document.getElementById('scoreFill');
+            fill.style.width = score + '%';
+            fill.className = 'fill ' + (score < 30 ? 'low' : score < 60 ? 'medium' : 'high');
+        }
+
+        // ===== Render Functions =====
+        function renderAll() {
+            renderCommands();
+            renderAuth();
+            updateStats();
+        }
+
+        function renderCommands() {
+            const container = document.getElementById('commandsContainer');
+            const cmds = filteredLogs.filter(l => l.type === 'command');
+
+            document.getElementById('cmdBadge').textContent = cmds.length;
+            document.getElementById('cmdCountInfo').textContent = cmds.length + ' cmds';
+
+            if (!cmds.length) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">⌨</div>
+                        <p>No commands found</p>
+                        <p class="sub">${selectedIP ? 'No cmds from ' + selectedIP : ''}</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            cmds.forEach(log => {
+                const geo = log.geo || {};
+                html += `
+                    <div class="log-entry command">
+                        <span class="time">${formatTime(log.timestamp)}</span>
+                        <span class="flag">${geo.flag || '🌐'}</span>
+                        <span class="ip" onclick="filterByIP('${log.ip}')">${log.ip || ''}</span>
+                        <span class="username">${log.username || ''}</span>
+                        <span class="cmd-label">▶</span>
+                        <span class="cmd-text">${escapeHtml(log.command || '')}</span>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function renderAuth() {
+            const container = document.getElementById('authContainer');
+            const auths = filteredLogs.filter(l => l.type === 'auth');
+
+            const success = auths.filter(l => l.status === 'SUCCESS').length;
+            const failed = auths.filter(l => l.status === 'FAILED').length;
+
+            document.getElementById('authBadge').textContent = auths.length;
+            document.getElementById('authSuccessSmall').textContent = success;
+            document.getElementById('authFailedSmall').textContent = failed;
+
+            if (!auths.length) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">🔐</div>
+                        <p>No login attempts</p>
+                        <p class="sub">${selectedIP ? 'No auth from ' + selectedIP : ''}</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            auths.forEach(log => {
+                const isSuccess = log.status === 'SUCCESS';
+                const isBF = bruteforceIPs.has(log.ip) && !isSuccess;
+                const cls = `log-entry ${isSuccess ? 'auth-success' : 'auth-failed'}${isBF ? ' bruteforce' : ''}`;
+                const geo = log.geo || {};
+                
+                html += `
+                    <div class="${cls}">
+                        <span class="time">${formatTime(log.timestamp)}</span>
+                        <span class="flag">${geo.flag || '🌐'}</span>
+                        <span class="ip" onclick="filterByIP('${log.ip}')">${log.ip || ''}</span>
+                        <span class="username">${log.username || ''}</span>
+                        <span class="password">${log.password || ''}</span>
+                        <span class="status ${isSuccess ? 'success' : 'failed'}">${isSuccess ? '✓' : '✗'}</span>
+                        ${isBF ? '<span class="bf-badge">⚡</span>' : ''}
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function updateStats() {
+            const total = filteredLogs.length;
+            const auth = filteredLogs.filter(l => l.type === 'auth');
+            const cmds = filteredLogs.filter(l => l.type === 'command');
+            const success = auth.filter(l => l.status === 'SUCCESS').length;
+            const failed = auth.filter(l => l.status === 'FAILED').length;
+            const ips = new Set(filteredLogs.map(l => l.ip));
+            
+            document.getElementById('totalLogs').textContent = total;
+            document.getElementById('totalAuth').textContent = auth.length;
+            document.getElementById('totalCommands').textContent = cmds.length;
+            document.getElementById('successfulLogins').textContent = success;
+            document.getElementById('failedLogins').textContent = failed;
+            document.getElementById('uniqueIPs').textContent = ips.size;
+        }
+
+        // ===== Stats from API =====
+        async function fetchStats() {
+            try {
+                const res = await fetch('/api/stats');
+                const stats = await res.json();
+                document.getElementById('totalLogs').textContent = stats.total_logs || 0;
+                document.getElementById('successfulLogins').textContent = stats.successful_logins || 0;
+                document.getElementById('failedLogins').textContent = stats.failed_logins || 0;
+                document.getElementById('totalCommands').textContent = stats.total_commands || 0;
+                document.getElementById('uniqueIPs').textContent = stats.unique_ips || 0;
+                document.getElementById('totalAuth').textContent = (stats.successful_logins || 0) + (stats.failed_logins || 0);
+            } catch (e) {}
+        }
+
+        // ===== SSE =====
+        function setupSSE() {
+            if (eventSource) eventSource.close();
+            eventSource = new EventSource('/api/stream');
+
+            eventSource.onopen = () => {
+                document.getElementById('statusText').textContent = 'Live';
+            };
+
+            eventSource.onmessage = (e) => {
+                try {
+                    const data = JSON.parse(e.data);
+                    if (data.type === 'connected') return;
+                    if (Array.isArray(data) && data.length) {
+                        const keys = new Set(allLogs.map(l => l.timestamp + l.ip + l.username + (l.command || l.password)));
+                        data.forEach(log => {
+                            const key = log.timestamp + log.ip + log.username + (log.command || log.password);
+                            if (!keys.has(key)) {
+                                allLogs.push(log);
+                                keys.add(key);
+                            }
+                        });
+                        if (allLogs.length > CONFIG.maxLogs) allLogs = allLogs.slice(-CONFIG.maxLogs);
+                        detectBruteforce();
+                        updateIPSelector();
+                        fetchStats();
+                        fetchPatterns();
+                        applyAllFilters();
+                    }
+                } catch (err) {}
+            };
+
+            eventSource.onerror = () => {
+                document.getElementById('statusText').textContent = 'Reconnecting...';
+                setTimeout(setupSSE, 3000);
+            };
+        }
+
+        // ===== Clock =====
+        function updateClock() {
+            document.getElementById('headerTime').textContent = new Date().toLocaleTimeString('en-US', {
+                hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit'
+            });
+        }
+
+        // ===== Init =====
+        async function init() {
+            try {
+                const res = await fetch('/api/logs?limit=1000');
+                allLogs = await res.json();
+                // Clear notification tracking on reload
+                notifiedIPs.clear();
+                notifiedTimestamps = {};
+                activeNotifications.clear();
+                Object.values(notificationTimers).forEach(timer => clearTimeout(timer));
+                notificationTimers = {};
+                
+                detectBruteforce();
+                updateIPSelector();
+                fetchStats();
+                fetchPatterns();
+                applyAllFilters();
+            } catch (e) { console.error('Init error:', e); }
+            
+            setupSSE();
+            setInterval(fetchStats, 5000);
+            setInterval(fetchPatterns, 10000);
+            setInterval(() => {
+                detectBruteforce();
+                updateIPSelector();
+            }, 30000);
+            setInterval(updateClock, 1000);
+            updateClock();
+        }
+
+        init();
+    </script>
+</body>
+</html>

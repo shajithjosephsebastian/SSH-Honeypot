@@ -29,9 +29,7 @@
   ::-webkit-scrollbar-thumb:hover{ background:var(--text-faint); }
   a{ color:inherit; }
   button{ font-family:inherit; }
-
   .shell{ height:100vh; display:grid; grid-template-rows:auto 1fr auto; }
-
   .topbar{
     height:40px; display:flex; align-items:center; gap:18px;
     padding:0 14px; border-bottom:1px solid var(--line);
@@ -47,12 +45,10 @@
   }
   .brand b{ font-weight:600; color:var(--text); }
   .brand span{ color:var(--text-faint); }
-
   .topbar-mid{ display:flex; align-items:center; gap:16px; margin-left:8px; }
   .metric{ display:flex; align-items:baseline; gap:5px; color:var(--text-dim); }
   .metric b{ color:var(--text); font-weight:600; font-variant-numeric:tabular-nums; }
   .metric.warn b{ color:var(--amber); }
-
   .topbar-right{ margin-left:auto; display:flex; align-items:center; gap:8px; }
   .clock{ color:var(--text-faint); font-variant-numeric:tabular-nums; font-size:12px; }
   .btn{
@@ -62,17 +58,15 @@
   }
   .btn:hover{ border-color:var(--text-faint); color:var(--text); }
   .btn.active{ border-color:var(--amber-dim); color:var(--amber); }
-
-  .main{ display:grid; grid-template-columns:240px 1fr 340px; min-height:0; }
+  .main{ display:grid; grid-template-columns:280px 1fr 320px; min-height:0; }
   .pane{ min-height:0; overflow:hidden; display:flex; flex-direction:column; }
   .pane + .pane{ border-left:1px solid var(--line); }
-
   .pane-head{
     padding:9px 12px; font-size:10.5px; letter-spacing:.06em; color:var(--text-faint);
     border-bottom:1px solid var(--line-lite); flex-shrink:0;
     display:flex; align-items:center; justify-content:space-between;
   }
-
+  .pane-head .count{ color:var(--text-dim); font-weight:500; }
   .gauge-wrap{ padding:16px 14px 10px; border-bottom:1px solid var(--line-lite); }
   .gauge-label{ font-size:10.5px; color:var(--text-faint); letter-spacing:.06em; margin-bottom:8px; }
   .gauge-num{ font-size:34px; font-weight:600; line-height:1; font-variant-numeric:tabular-nums; }
@@ -80,46 +74,104 @@
   .gauge-bar{ height:4px; background:var(--line); border-radius:2px; margin-top:10px; overflow:hidden; }
   .gauge-fill{ height:100%; background:var(--teal); transition:width .5s ease, background .3s ease; width:0%; }
   .gauge-sub{ margin-top:8px; font-size:11px; color:var(--text-dim); }
-
   .rail-stats{ padding:10px 14px; border-bottom:1px solid var(--line-lite); display:grid; grid-template-columns:1fr 1fr; gap:10px; }
   .rail-stat b{ display:block; font-size:17px; font-weight:600; font-variant-numeric:tabular-nums; }
   .rail-stat span{ font-size:10.5px; color:var(--text-faint); }
-
-  .ticker{ flex:1; overflow-y:auto; padding:4px 0; min-height:0; }
-  .tick{ padding:6px 14px; font-size:11px; border-bottom:1px solid var(--line-lite); display:flex; gap:8px; align-items:baseline; }
-  .tick .t{ color:var(--text-faint); flex-shrink:0; font-size:10px; }
-  .tick .m{ color:var(--text-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .source-table-wrap{ flex:1; overflow-y:auto; min-height:0; }
+  .source-table{ width:100%; border-collapse:collapse; }
+  .source-table thead th{
+    position:sticky; top:0; background:var(--surface); z-index:1;
+    text-align:left; font-weight:500; font-size:10px; color:var(--text-faint);
+    padding:6px 10px; border-bottom:1px solid var(--line); letter-spacing:.04em;
+  }
+  .source-table tbody tr{ cursor:pointer; border-bottom:1px solid var(--line-lite); transition:background .1s; }
+  .source-table tbody tr:hover{ background:var(--surface-2); }
+  .source-table tbody tr.sel{ background:#182430; }
+  .source-table td{ padding:6px 10px; font-size:11px; vertical-align:middle; }
+  .source-table .ip-cell{ display:flex; align-items:center; gap:6px; }
+  .source-table .flag{ font-size:12px; }
+  .source-table .ip-mono{ color:var(--text); font-size:11px; }
+  .source-table .geo-sub{ color:var(--text-faint); font-size:9px; }
+  .source-table .badge{ font-size:8px; padding:1px 6px; border-radius:8px; font-weight:600; letter-spacing:.03em; }
+  .source-table .badge.brute{ background:rgba(217,105,95,.15); color:var(--red); }
+  .source-table .badge.spray{ background:rgba(232,163,61,.15); color:var(--amber); }
+  .source-table .badge.dict{ background:rgba(95,179,163,.15); color:var(--teal); }
+  .source-table .badge.probe{ background:rgba(124,136,152,.15); color:var(--text-dim); }
+  .source-table .num-cell{ font-variant-numeric:tabular-nums; color:var(--text-dim); text-align:right; font-size:10px; }
+  .source-table .num-cell.hot{ color:var(--red); font-weight:600; }
+  .source-table .time-cell{ color:var(--text-faint); font-size:10px; white-space:nowrap; }
+  .source-table .breached{ color:var(--amber); font-size:10px; }
+  .live-feed{
+    flex:1; overflow-y:auto; padding:4px 0; min-height:0;
+    background:var(--bg);
+  }
+  .live-feed .empty-hint{
+    padding:30px 20px; color:var(--text-faint); font-size:12px; line-height:1.8; text-align:center;
+  }
+  .tick{
+    padding:5px 14px; font-size:11px; border-bottom:1px solid var(--line-lite);
+    display:flex; gap:10px; align-items:baseline; transition:background .1s;
+    animation: fadeIn 0.3s ease;
+  }
+  @keyframes fadeIn{
+    from{ opacity:0; transform:translateX(-8px); }
+    to{ opacity:1; transform:translateX(0); }
+  }
+  .tick:hover{ background:var(--surface-2); }
+  .tick .t{ color:var(--text-faint); flex-shrink:0; font-size:10px; min-width:70px; }
+  .tick .m{ color:var(--text-dim); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .tick .m b{ color:var(--text); font-weight:500; }
+  .tick .m .highlight{ background:var(--surface-2); padding:0 4px; border-radius:2px; }
   .tick.fail .m b.st{ color:var(--red); }
   .tick.ok .m b.st{ color:var(--teal); }
   .tick.cmd .m b.st{ color:var(--amber); }
-  .empty-hint{ padding:20px 14px; color:var(--text-faint); font-size:11.5px; line-height:1.6; }
-
-  .toolbar{ display:flex; gap:8px; padding:8px 12px; border-bottom:1px solid var(--line-lite); flex-shrink:0; }
-  .search{
+  .tick .badge-mini{
+    font-size:8px; padding:1px 6px; border-radius:4px; flex-shrink:0;
+    background:var(--surface-2); color:var(--text-faint);
+  }
+  .tick .badge-mini.auth{ color:var(--text-dim); }
+  .tick .badge-mini.cmd{ color:var(--amber); border:1px solid rgba(232,163,61,.2); }
+  .tick .badge-mini.success{ color:var(--teal); border:1px solid rgba(95,179,163,.2); }
+  .tick .badge-mini.fail{ color:var(--red); border:1px solid rgba(217,105,95,.2); }
+  .tick .flag{ font-size:12px; flex-shrink:0; }
+  .live-toolbar{
+    padding:6px 12px; border-bottom:1px solid var(--line-lite); flex-shrink:0;
+    display:flex; gap:8px; align-items:center;
+  }
+  .live-toolbar .search{
     flex:1; background:var(--surface-2); border:1px solid var(--line); color:var(--text);
-    padding:5px 9px; border-radius:var(--radius); font-family:inherit; font-size:12px; outline:none;
+    padding:4px 9px; border-radius:var(--radius); font-family:inherit; font-size:11px; outline:none;
   }
-  .search:focus{ border-color:var(--amber-dim); }
-  .search::placeholder{ color:var(--text-faint); }
-  .sortbtn{ background:var(--surface-2); border:1px solid var(--line); color:var(--text-dim); padding:5px 9px; border-radius:var(--radius); cursor:pointer; font-size:11px; }
-  .sortbtn.active{ color:var(--amber); border-color:var(--amber-dim); }
-
-  .table-scroll{ flex:1; overflow-y:auto; min-height:0; }
-  table{ width:100%; border-collapse:collapse; }
-  thead th{
-    position:sticky; top:0; background:var(--surface); z-index:1;
-    text-align:left; font-weight:500; font-size:10.5px; color:var(--text-faint);
-    padding:7px 12px; border-bottom:1px solid var(--line); letter-spacing:.04em;
+  .live-toolbar .search:focus{ border-color:var(--amber-dim); }
+  .live-toolbar .search::placeholder{ color:var(--text-faint); }
+  .live-toolbar .filter-badge{
+    font-size:10px; color:var(--text-faint); padding:2px 8px; background:var(--surface-2);
+    border-radius:var(--radius); border:1px solid var(--line);
   }
-  tbody tr{ cursor:pointer; border-bottom:1px solid var(--line-lite); transition:background .1s; }
-  tbody tr:hover{ background:var(--surface-2); }
-  tbody tr.sel{ background:#182430; }
-  td{ padding:8px 12px; font-size:12px; vertical-align:middle; }
-  .ip-cell{ display:flex; align-items:center; gap:7px; }
-  .flag{ font-size:14px; }
-  .ip-mono{ color:var(--text); }
-  .geo-sub{ color:var(--text-faint); font-size:10.5px; }
+  .drawer{ overflow-y:auto; min-height:0; }
+  .drawer-empty{ padding:40px 20px; color:var(--text-faint); font-size:12px; line-height:1.7; text-align:center; }
+  .drawer-head{ padding:14px; border-bottom:1px solid var(--line-lite); }
+  .drawer-ip{ font-size:18px; font-weight:600; display:flex; align-items:center; gap:8px; }
+  .drawer-geo{ color:var(--text-dim); font-size:11.5px; margin-top:4px; }
+  .drawer-badges{ display:flex; gap:6px; margin-top:9px; flex-wrap:wrap; }
+  .drawer-section{ padding:12px 14px; border-bottom:1px solid var(--line-lite); }
+  .drawer-section h4{ font-size:10.5px; color:var(--text-faint); letter-spacing:.06em; font-weight:500; margin-bottom:9px; }
+  .kv{ display:flex; justify-content:space-between; font-size:12px; padding:3px 0; }
+  .kv .k{ color:var(--text-dim); }
+  .kv .v{ color:var(--text); font-variant-numeric:tabular-nums; }
+  .cred-row{ display:flex; justify-content:space-between; align-items:center; padding:4px 0; font-size:11.5px; }
+  .cred-row .pair{ color:var(--text-dim); }
+  .cred-row .pair b{ color:var(--text); font-weight:500; }
+  .cmd-line{ font-size:11.5px; color:var(--text-dim); padding:3px 0; white-space:pre-wrap; word-break:break-all; }
+  .cmd-line b{ color:var(--text); font-weight:500; }
+  .cmd-line.danger{ color:var(--red); }
+  .cmd-line.danger b{ color:var(--red); }
+  .statusbar{
+    height:26px; display:flex; align-items:center; gap:16px; padding:0 14px;
+    border-top:1px solid var(--line); background:var(--surface); font-size:10.5px; color:var(--text-faint);
+    flex-shrink:0;
+  }
+  .statusbar b{ color:var(--text-dim); font-weight:500; }
   .badge{
     display:inline-block; padding:1px 7px; border-radius:9px; font-size:10px; font-weight:600;
     letter-spacing:.03em;
@@ -128,44 +180,91 @@
   .badge.spray{ background:rgba(232,163,61,.15); color:var(--amber); }
   .badge.dict{ background:rgba(95,179,163,.15); color:var(--teal); }
   .badge.probe{ background:rgba(124,136,152,.15); color:var(--text-dim); }
-  .num-cell{ font-variant-numeric:tabular-nums; color:var(--text-dim); text-align:right; }
-  .num-cell.hot{ color:var(--red); font-weight:600; }
-  .time-cell{ color:var(--text-faint); font-size:11px; white-space:nowrap; }
-  .breached{ color:var(--amber); font-size:11px; }
-
-  .drawer{ overflow-y:auto; min-height:0; }
-  .drawer-empty{ padding:40px 20px; color:var(--text-faint); font-size:12px; line-height:1.7; text-align:center; }
-  .drawer-head{ padding:14px; border-bottom:1px solid var(--line-lite); }
-  .drawer-ip{ font-size:18px; font-weight:600; display:flex; align-items:center; gap:8px; }
-  .drawer-geo{ color:var(--text-dim); font-size:11.5px; margin-top:4px; }
-  .drawer-badges{ display:flex; gap:6px; margin-top:9px; flex-wrap:wrap; }
-
-  .drawer-section{ padding:12px 14px; border-bottom:1px solid var(--line-lite); }
-  .drawer-section h4{ font-size:10.5px; color:var(--text-faint); letter-spacing:.06em; font-weight:500; margin-bottom:9px; }
-  .kv{ display:flex; justify-content:space-between; font-size:12px; padding:3px 0; }
-  .kv .k{ color:var(--text-dim); }
-  .kv .v{ color:var(--text); font-variant-numeric:tabular-nums; }
-
-  .cred-row{ display:flex; justify-content:space-between; align-items:center; padding:4px 0; font-size:11.5px; }
-  .cred-row .pair{ color:var(--text-dim); }
-  .cred-row .pair b{ color:var(--text); font-weight:500; }
-
-  .cmd-line{ font-size:11.5px; color:var(--text-dim); padding:3px 0; white-space:pre-wrap; word-break:break-all; }
-  .cmd-line b{ color:var(--text); font-weight:500; }
-  .cmd-line.danger{ color:var(--red); }
-  .cmd-line.danger b{ color:var(--red); }
-
-  .statusbar{
-    height:26px; display:flex; align-items:center; gap:16px; padding:0 14px;
-    border-top:1px solid var(--line); background:var(--surface); font-size:10.5px; color:var(--text-faint);
-    flex-shrink:0;
+  @media (max-width: 1200px) {
+    .main{ grid-template-columns:220px 1fr 280px; }
   }
-  .statusbar b{ color:var(--text-dim); font-weight:500; }
+  @media (max-width: 992px) {
+    .main{ grid-template-columns:1fr; grid-template-rows:auto 1fr auto; }
+    .pane + .pane{ border-left:none; border-top:1px solid var(--line); }
+    .source-table-wrap{ max-height:200px; }
+    .live-feed{ max-height:400px; }
+    .drawer{ max-height:300px; }
+  }
+
+  /* ===== view tabs (feed / map) ===== */
+  .view-tabs{ display:flex; gap:4px; }
+  .view-tab{
+    background:transparent; border:1px solid var(--line); color:var(--text-faint);
+    padding:2px 9px; border-radius:var(--radius); cursor:pointer; font-size:10px;
+  }
+  .view-tab.active{ color:var(--amber); border-color:var(--amber-dim); }
+  .view-body{ flex:1; min-height:0; display:flex; flex-direction:column; }
+  .view-body.hidden{ display:none; }
+
+  /* ===== map ===== */
+  .map-wrap{ flex:1; min-height:0; position:relative; overflow:hidden; background:var(--bg); }
+  .map-wrap svg{ width:100%; height:100%; display:block; }
+  .map-land{ fill:var(--surface-2); stroke:var(--line); stroke-width:.5; }
+  .map-dot{ fill:var(--amber); opacity:.85; cursor:pointer; }
+  .map-dot.breach{ fill:var(--red); }
+  .map-dot:hover{ opacity:1; }
+  .map-legend{
+    position:absolute; bottom:10px; left:10px; font-size:10px; color:var(--text-faint);
+    background:rgba(16,20,27,.8); padding:6px 10px; border-radius:var(--radius); border:1px solid var(--line);
+    display:flex; gap:12px;
+  }
+  .map-legend span{ display:flex; align-items:center; gap:5px; }
+  .map-legend .sw{ width:7px; height:7px; border-radius:50%; display:inline-block; }
+  .map-empty{ display:flex; align-items:center; justify-content:center; height:100%; color:var(--text-faint); font-size:12px; }
+
+  /* ===== toast / alert ===== */
+  .toast-stack{ position:fixed; top:48px; right:14px; display:flex; flex-direction:column; gap:8px; z-index:50; max-width:320px; }
+  .toast{
+    background:var(--surface); border:1px solid var(--line); border-left:3px solid var(--amber);
+    border-radius:var(--radius); padding:9px 12px; font-size:11.5px; color:var(--text);
+    box-shadow:0 6px 20px rgba(0,0,0,.4); animation:toastIn .25s ease;
+  }
+  .toast.breach{ border-left-color:var(--red); }
+  .toast b{ display:block; font-size:11px; letter-spacing:.03em; margin-bottom:3px; }
+  .toast.breach b{ color:var(--red); }
+  .toast:not(.breach) b{ color:var(--amber); }
+  .toast .sub{ color:var(--text-dim); font-size:11px; }
+  @keyframes toastIn{ from{ opacity:0; transform:translateX(16px); } to{ opacity:1; transform:translateX(0); } }
+  .toast.out{ animation:toastOut .2s ease forwards; }
+  @keyframes toastOut{ to{ opacity:0; transform:translateX(16px); } }
+
+  /* ===== block button + replay controls in drawer ===== */
+  .drawer-actions{ display:flex; gap:6px; margin-top:10px; }
+  .drawer-actions .btn{ font-size:10px; padding:4px 8px; }
+  .block-flyout{
+    position:absolute; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+    padding:10px; font-size:11px; box-shadow:0 8px 24px rgba(0,0,0,.5); z-index:60; width:280px;
+  }
+  .block-flyout .cmd-box{
+    background:var(--bg); border:1px solid var(--line); border-radius:var(--radius); padding:7px 9px;
+    font-size:10.5px; color:var(--teal); margin:6px 0; word-break:break-all; cursor:pointer;
+  }
+  .block-flyout .cmd-box:hover{ border-color:var(--amber-dim); }
+  .block-flyout .label{ color:var(--text-faint); font-size:9.5px; letter-spacing:.05em; margin-top:8px; }
+  .block-flyout .close-x{ position:absolute; top:6px; right:8px; cursor:pointer; color:var(--text-faint); }
+
+  .replay-bar{ display:flex; align-items:center; gap:8px; margin-top:8px; }
+  .replay-bar .btn{ font-size:10px; padding:4px 9px; }
+  .replay-progress{ flex:1; height:3px; background:var(--line); border-radius:2px; overflow:hidden; }
+  .replay-progress-fill{ height:100%; background:var(--teal); width:0%; transition:width .15s linear; }
+  .term{
+    background:#000; border:1px solid var(--line); border-radius:var(--radius); padding:10px;
+    font-size:11px; color:#8effa0; min-height:90px; max-height:220px; overflow-y:auto; margin-top:8px;
+    white-space:pre-wrap; word-break:break-all;
+  }
+  .term .prompt{ color:var(--text-faint); }
+  .term .cursor{ display:inline-block; width:6px; height:12px; background:#8effa0; animation:blink 1s step-end infinite; vertical-align:middle; }
+  @keyframes blink{ 50%{ opacity:0; } }
 </style>
 </head>
 <body>
+<div class="toast-stack" id="toastStack"></div>
 <div class="shell">
-
   <div class="topbar">
     <div class="brand">
       <span class="dot" id="liveDot"></span>
@@ -183,9 +282,7 @@
       <button class="btn" id="pauseBtn">pause</button>
     </div>
   </div>
-
   <div class="main">
-
     <div class="pane">
       <div class="gauge-wrap">
         <div class="gauge-label">threat score</div>
@@ -199,79 +296,131 @@
         <div class="rail-stat"><b id="sDict">0</b><span>dictionary</span></div>
         <div class="rail-stat"><b id="sCountries">0</b><span>countries</span></div>
       </div>
-      <div class="pane-head">live feed</div>
-      <div class="ticker" id="ticker">
-        <div class="empty-hint">No activity yet. Connections will stream here the moment something hits the honeypot.</div>
+      <div class="pane-head">
+        sources
+        <span class="count" id="sourceCount">0</span>
       </div>
-    </div>
-
-    <div class="pane">
-      <div class="toolbar">
-        <input class="search" id="search" placeholder="filter by ip, username, password, country&hellip;" />
-        <button class="sortbtn active" data-sort="attempts">by attempts</button>
-        <button class="sortbtn" data-sort="last">by recent</button>
-        <button class="sortbtn" data-sort="commands">by commands</button>
-      </div>
-      <div class="table-scroll">
-        <table>
+      <div class="source-table-wrap">
+        <table class="source-table">
           <thead>
             <tr>
               <th>source</th>
-              <th>pattern</th>
-              <th style="text-align:right">attempts</th>
-              <th style="text-align:right">cmds</th>
-              <th>last seen</th>
+              <th style="text-align:right">att</th>
+              <th style="text-align:right">cmd</th>
+              <th>last</th>
             </tr>
           </thead>
           <tbody id="attackerRows">
-            <tr><td colspan="5" style="padding:24px 12px;color:var(--text-faint)">No attackers observed yet.</td></tr>
+            <tr><td colspan="4" style="padding:24px 12px;color:var(--text-faint);text-align:center;">No attackers yet.</td></tr>
           </tbody>
         </table>
       </div>
     </div>
+    <div class="pane">
+      <div class="pane-head">
+        <div class="view-tabs">
+          <button class="view-tab active" data-view="feed">live feed</button>
+          <button class="view-tab" data-view="map">map</button>
+        </div>
+        <span class="count" id="liveCount">0</span>
+      </div>
 
+      <div class="view-body" id="viewFeed">
+        <div class="live-toolbar">
+          <input class="search" id="liveSearch" placeholder="filter live feed by ip, username, command&hellip;" />
+          <span class="filter-badge" id="liveFilterBadge">all</span>
+          <button class="btn" id="clearFeed" style="font-size:10px;padding:2px 8px;">clear</button>
+        </div>
+        <div class="live-feed" id="liveFeed">
+          <div class="empty-hint">
+            No activity yet.<br/>
+            <span style="font-size:11px;color:var(--text-faint);">
+              Connections will stream here in real-time as they hit the honeypot.
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="view-body hidden" id="viewMap">
+        <div class="map-wrap" id="mapWrap">
+          <div class="map-empty">No geolocated attackers yet.</div>
+        </div>
+      </div>
+    </div>
     <div class="pane">
       <div class="pane-head">session detail</div>
       <div class="drawer" id="drawer">
-        <div class="drawer-empty">Select a source from the table<br/>to inspect its full session &mdash;<br/>credentials tried, commands run,<br/>and geo.</div>
+        <div class="drawer-empty">
+          Select a source from the left<br/>
+          to inspect its full session &mdash;<br/>
+          credentials tried, commands run,<br/>
+          and geo location.
+        </div>
       </div>
     </div>
-
   </div>
-
   <div class="statusbar">
     <span id="connState">connecting&hellip;</span>
     <span>&middot;</span>
     <span>log source: <b>honeypot.log</b></span>
     <span>&middot;</span>
     <span id="lastEvent">no events yet</span>
+    <span style="margin-left:auto;" id="dupStats"></span>
   </div>
-
 </div>
-
 <script>
 (function(){
   "use strict";
-
+  const processedIds = new Set();
+  const seenLiveIds = new Set();
   const state = {
-    logs: [],
-    attackers: new Map(),
-    paused: false,
-    selectedIp: null,
-    sortMode: 'attempts',
-    filter: ''
+    logs: [], liveEntries: [], attackers: new Map(),
+    paused: false, selectedIp: null, sortMode: 'attempts', filter: '', liveFilter: '',
+    totalAdded: 0, totalDuplicates: 0, maxLiveEntries: 200, initialLoadComplete: false,
+    activeView: 'feed', replaying: false, replayTimer: null,
+    alertedBreaches: new Set(),   // ips we've already toasted a breach for
+    bruteWindowStarts: new Map()  // ip -> [timestamps of recent fails], for the 5-in-2min alert
   };
+  const STORAGE_KEY = 'honeypot_console_state_v1';
+  const STORAGE_MAX_LOGS = 2000; // cap what we persist so localStorage doesn't grow unbounded
 
+  function saveState(){
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        logs: state.logs.slice(-STORAGE_MAX_LOGS),
+        savedAt: Date.now()
+      }));
+    }catch(e){ /* storage full or unavailable - dashboard still works, just won't persist */ }
+  }
+  function loadPersisted(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed.logs) ? parsed.logs : [];
+    }catch(e){ return []; }
+  }
   const $ = (id) => document.getElementById(id);
   const els = {
     liveDot: $('liveDot'), connState: $('connState'), lastEvent: $('lastEvent'), clock: $('clock'),
     mUnique: $('mUnique'), mFailed: $('mFailed'), mSuccess: $('mSuccess'), mCmds: $('mCmds'),
     threatScore: $('threatScore'), gaugeFill: $('gaugeFill'), threatSub: $('threatSub'),
     sBrute: $('sBrute'), sSpray: $('sSpray'), sDict: $('sDict'), sCountries: $('sCountries'),
-    ticker: $('ticker'), attackerRows: $('attackerRows'), drawer: $('drawer'),
-    search: $('search'), pauseBtn: $('pauseBtn'), exportCsv: $('exportCsv')
+    liveFeed: $('liveFeed'), liveSearch: $('liveSearch'), liveFilterBadge: $('liveFilterBadge'),
+    liveCount: $('liveCount'), clearFeed: $('clearFeed'),
+    attackerRows: $('attackerRows'), drawer: $('drawer'), sourceCount: $('sourceCount'),
+    pauseBtn: $('pauseBtn'), exportCsv: $('exportCsv'),
+    dupStats: $('dupStats'),
+    toastStack: $('toastStack'), viewFeed: $('viewFeed'), viewMap: $('viewMap'), mapWrap: $('mapWrap')
   };
-
+  function getLogId(entry) {
+    const base = `${entry.timestamp}|${entry.ip}|${entry.username}`;
+    if (entry.type === 'auth') {
+      return `${base}|auth|${entry.password}|${entry.status}`;
+    } else {
+      return `${base}|cmd|${entry.command}`;
+    }
+  }
   function fmtTime(iso){
     try{
       const d = new Date(iso);
@@ -293,13 +442,75 @@
       '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
     })[c]);
   }
-
   const DANGEROUS = ['rm','dd','mkfs','shutdown','reboot','kill','chmod 777','chown','passwd',
                       'useradd','userdel','wget','curl','nc','netcat','telnet','ssh','python -c','perl -e','bash -c','sh -c'];
   function isDangerous(cmd){
     if(!cmd) return false;
     const c = cmd.toLowerCase();
     return DANGEROUS.some(d => c.includes(d));
+  }
+  // ============================================
+  // ALERTS: toast + sound + browser notification
+  // ============================================
+  let audioCtx = null;
+  function beep(freq, dur){
+    try{
+      if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      osc.frequency.value = freq;
+      osc.type = 'sine';
+      gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+      osc.start();
+      osc.stop(audioCtx.currentTime + dur);
+    }catch(e){ /* audio not available/blocked until user interacts with the page - non-fatal */ }
+  }
+
+  function toast(title, sub, kind){
+    const el = document.createElement('div');
+    el.className = 'toast' + (kind === 'breach' ? ' breach' : '');
+    el.innerHTML = `<b>${esc(title)}</b><span class="sub">${esc(sub)}</span>`;
+    els.toastStack.appendChild(el);
+    setTimeout(() => {
+      el.classList.add('out');
+      setTimeout(() => el.remove(), 220);
+    }, 6000);
+
+    if(kind === 'breach'){ beep(880, 0.35); setTimeout(()=>beep(660,0.35), 180); }
+    else { beep(520, 0.2); }
+
+    if('Notification' in window && Notification.permission === 'granted'){
+      try{ new Notification(title, { body: sub }); }catch(e){}
+    }
+  }
+
+  function requestNotifyPermission(){
+    if('Notification' in window && Notification.permission === 'default'){
+      Notification.requestPermission();
+    }
+  }
+
+  function checkAlerts(entry, a){
+    // breach alert: first successful login for this ip
+    if(entry.type === 'auth' && entry.status === 'SUCCESS' && !state.alertedBreaches.has(entry.ip)){
+      state.alertedBreaches.add(entry.ip);
+      toast('Breach detected', `${entry.ip} authenticated as "${entry.username}"`, 'breach');
+    }
+    // brute-force alert: 5+ failed attempts from one ip within a 2-minute window
+    if(entry.type === 'auth' && entry.status !== 'SUCCESS'){
+      const t = new Date(entry.timestamp).getTime();
+      if(!isNaN(t)){
+        let arr = state.bruteWindowStarts.get(entry.ip) || [];
+        arr.push(t);
+        arr = arr.filter(ts => t - ts <= 2*60*1000); // keep only last 2 minutes
+        state.bruteWindowStarts.set(entry.ip, arr);
+        if(arr.length === 5){ // fire once, right when it crosses the threshold
+          toast('Brute-force threshold', `${entry.ip} - 5 failed logins in under 2 minutes`, 'brute');
+        }
+      }
+    }
   }
 
   function getAttacker(ip){
@@ -312,15 +523,33 @@
     }
     return state.attackers.get(ip);
   }
-
-  function ingest(entry){
+  function ingest(entry, fromStream = false){
     if(!entry || !entry.ip) return;
+    const logId = getLogId(entry);
+    if (processedIds.has(logId)) {
+      state.totalDuplicates++;
+      return;
+    }
+    processedIds.add(logId);
+    state.totalAdded++;
     state.logs.push(entry);
+    if (fromStream || state.initialLoadComplete) {
+      if (!seenLiveIds.has(logId)) {
+        seenLiveIds.add(logId);
+        state.liveEntries.push(entry);
+        if (state.liveEntries.length > state.maxLiveEntries) {
+          const removed = state.liveEntries.splice(0, state.liveEntries.length - state.maxLiveEntries);
+          removed.forEach(e => {
+            const id = getLogId(e);
+            seenLiveIds.delete(id);
+          });
+        }
+      }
+    }
     const a = getAttacker(entry.ip);
     if(entry.geo) a.geo = entry.geo;
     if(!a.firstSeen) a.firstSeen = entry.timestamp;
     a.lastSeen = entry.timestamp;
-
     if(entry.type === 'auth'){
       a.attempts++;
       if(entry.status === 'SUCCESS'){ a.success++; a.breached = true; }
@@ -331,9 +560,8 @@
       a.commands++;
       a.cmdList.push({cmd:entry.command, ts:entry.timestamp, dangerous:isDangerous(entry.command)});
     }
-    pushTicker(entry);
+    if(fromStream) checkAlerts(entry, a);
   }
-
   function pattern(a){
     if(a.failed >= 5){
       const pw = a.passwords.size, un = a.usernames.size;
@@ -344,121 +572,105 @@
     return 'probe';
   }
   const patternLabel = {brute:'brute-force', spray:'pw spray', dict:'dictionary', probe:'probe'};
-
-  let tickerHasContent = false;
-  function pushTicker(entry){
-    if(!tickerHasContent){
-      els.ticker.innerHTML = '';
-      tickerHasContent = true;
-    }
-    const row = document.createElement('div');
-    let cls = 'tick', html = '';
-    if(entry.type === 'auth'){
-      cls += entry.status === 'SUCCESS' ? ' ok' : ' fail';
-      const verb = entry.status === 'SUCCESS' ? 'authenticated as' : 'tried';
-      html = `<span class="t">${fmtTime(entry.timestamp)}</span>
-              <span class="m"><b>${esc(entry.ip)}</b> ${verb} <b class="st">${esc(entry.username)}</b></span>`;
-    } else {
-      cls += ' cmd';
-      html = `<span class="t">${fmtTime(entry.timestamp)}</span>
-              <span class="m"><b>${esc(entry.ip)}</b> ran <b class="st">${esc(entry.command)}</b></span>`;
-    }
-    row.className = cls;
-    row.innerHTML = html;
-    els.ticker.insertBefore(row, els.ticker.firstChild);
-    while(els.ticker.children.length > 150) els.ticker.removeChild(els.ticker.lastChild);
-  }
-
-  function renderMetrics(){
-    let failed=0, success=0, cmds=0;
-    for(const l of state.logs){
-      if(l.type === 'auth'){ if(l.status==='SUCCESS') success++; else failed++; }
-      else if(l.type === 'command') cmds++;
-    }
-    els.mUnique.textContent = state.attackers.size;
-    els.mFailed.textContent = failed;
-    els.mSuccess.textContent = success;
-    els.mCmds.textContent = cmds;
-  }
-
-  function renderThreat(patterns){
-    if(!patterns){ return; }
-    const score = patterns.attack_score || 0;
-    els.threatScore.textContent = score;
-    els.gaugeFill.style.width = score + '%';
-    els.gaugeFill.style.background = score >= 70 ? 'var(--red)' : score >= 35 ? 'var(--amber)' : 'var(--teal)';
-    els.threatSub.textContent = score >= 70 ? 'high volume of hostile probing'
-                               : score >= 35 ? 'sustained probing activity'
-                               : score > 0   ? 'low-level scanning'
-                               : 'no significant activity';
-    const at = patterns.attack_types || {};
-    els.sBrute.textContent = at.bruteforce || 0;
-    els.sSpray.textContent = at.password_spray || 0;
-    els.sDict.textContent = at.dictionary || 0;
-    els.sCountries.textContent = Object.keys(patterns.geo_distribution || {}).length;
-  }
-
-  function renderTable(){
-    let list = Array.from(state.attackers.values());
-    const f = state.filter.trim().toLowerCase();
-    if(f){
-      list = list.filter(a => {
-        if(a.ip.toLowerCase().includes(f)) return true;
-        if(a.geo && ((a.geo.country||'').toLowerCase().includes(f) || (a.geo.city||'').toLowerCase().includes(f))) return true;
-        for(const u of a.usernames.keys()) if(u.toLowerCase().includes(f)) return true;
-        for(const p of a.passwords.keys()) if(p.toLowerCase().includes(f)) return true;
+  function renderLiveFeed(){
+    let entries = state.liveEntries;
+    const filter = state.liveFilter.trim().toLowerCase();
+    if(filter){
+      entries = entries.filter(e => {
+        if(e.ip.toLowerCase().includes(filter)) return true;
+        if(e.username && e.username.toLowerCase().includes(filter)) return true;
+        if(e.command && e.command.toLowerCase().includes(filter)) return true;
+        if(e.password && e.password.toLowerCase().includes(filter)) return true;
         return false;
       });
     }
+    els.liveCount.textContent = state.liveEntries.length;
+    if(entries.length === 0){
+      els.liveFeed.innerHTML = `<div class="empty-hint">
+        ${state.liveEntries.length === 0 ?
+          'No activity yet.<br/><span style="font-size:11px;color:var(--text-faint);">Connections will stream here in real-time.</span>' :
+          'No entries match your filter.'}
+      </div>`;
+      return;
+    }
+    let html = '';
+    entries.slice().reverse().forEach(e => {
+      let cls = 'tick';
+      let content = '';
+      const flag = (e.geo && e.geo.flag) || '\ud83c\udf10';
+      if(e.type === 'auth'){
+        cls += e.status === 'SUCCESS' ? ' ok' : ' fail';
+        const verb = e.status === 'SUCCESS' ? 'authenticated as' : 'tried';
+        const badge = e.status === 'SUCCESS' ? 'success' : 'fail';
+        content = `
+          <span class="t">${fmtTime(e.timestamp)}</span>
+          <span class="flag">${flag}</span>
+          <span class="m"><b>${esc(e.ip)}</b> ${verb} <b class="st">${esc(e.username)}</b></span>
+          <span class="badge-mini ${badge}">${e.status}</span>
+        `;
+      } else {
+        cls += ' cmd';
+        const danger = isDangerous(e.command) ? '&#9888; ' : '';
+        content = `
+          <span class="t">${fmtTime(e.timestamp)}</span>
+          <span class="flag">${flag}</span>
+          <span class="m"><b>${esc(e.ip)}</b> ran <b class="st">${danger}${esc(e.command)}</b></span>
+          <span class="badge-mini cmd">cmd</span>
+        `;
+      }
+      html += `<div class="${cls}">${content}</div>`;
+    });
+    els.liveFeed.innerHTML = html;
+  }
+  function renderSourceTable(){
+    let list = Array.from(state.attackers.values());
     list.sort((a,b) => {
       if(state.sortMode === 'attempts') return b.attempts - a.attempts;
       if(state.sortMode === 'commands') return b.commands - a.commands;
       return new Date(b.lastSeen) - new Date(a.lastSeen);
     });
-
+    els.sourceCount.textContent = list.length;
     if(list.length === 0){
-      els.attackerRows.innerHTML = `<tr><td colspan="5" style="padding:24px 12px;color:var(--text-faint)">No attackers match.</td></tr>`;
+      els.attackerRows.innerHTML = `<tr><td colspan="4" style="padding:24px 12px;color:var(--text-faint);text-align:center;">No attackers yet.</td></tr>`;
       return;
     }
-
     els.attackerRows.innerHTML = list.map(a => {
       const p = pattern(a);
       const geo = a.geo || {};
       const flag = geo.flag || '\ud83c\udf10';
-      const sub = [geo.city, geo.country].filter(Boolean).join(', ') || 'Unknown location';
       const hot = a.failed >= 8 ? 'hot' : '';
+      const breached = a.breached ? ' &#9888;' : '';
       return `<tr data-ip="${esc(a.ip)}" class="${state.selectedIp===a.ip?'sel':''}">
         <td>
           <div class="ip-cell">
             <span class="flag">${flag}</span>
             <div>
-              <div class="ip-mono">${esc(a.ip)}${a.breached ? ' <span class=\"breached\">&#9888; breached</span>' : ''}</div>
-              <div class="geo-sub">${esc(sub)}</div>
+              <div class="ip-mono">${esc(a.ip)}${breached}</div>
+              <div class="geo-sub">${esc(geo.country || 'Unknown')}</div>
             </div>
           </div>
         </td>
-        <td><span class="badge ${p}">${patternLabel[p]}</span></td>
         <td class="num-cell ${hot}">${a.attempts}</td>
         <td class="num-cell">${a.commands}</td>
         <td class="time-cell">${relTime(a.lastSeen)}</td>
       </tr>`;
     }).join('');
-
     els.attackerRows.querySelectorAll('tr[data-ip]').forEach(tr => {
       tr.addEventListener('click', () => selectAttacker(tr.getAttribute('data-ip')));
     });
   }
-
   function selectAttacker(ip){
     state.selectedIp = ip;
-    renderTable();
+    renderSourceTable();
     renderDrawer();
   }
-
   function renderDrawer(){
     const a = state.attackers.get(state.selectedIp);
     if(!a){
-      els.drawer.innerHTML = `<div class="drawer-empty">Select a source from the table<br/>to inspect its full session &mdash;<br/>credentials tried, commands run,<br/>and geo.</div>`;
+      els.drawer.innerHTML = `<div class="drawer-empty">
+        Select a source from the left<br/>
+        to inspect its full session.
+      </div>`;
       return;
     }
     const p = pattern(a);
@@ -466,21 +678,17 @@
     const flag = geo.flag || '\ud83c\udf10';
     const loc = [geo.city, geo.region, geo.country].filter(Boolean).join(', ') || 'Unknown location';
     const isp = geo.isp || geo.org || '';
-
     const creds = Array.from(a.usernames.entries())
       .sort((x,y)=>y[1]-x[1]).slice(0,12)
       .map(([u,c]) => `<div class="cred-row"><span class="pair"><b>${esc(u)}</b> &times; ${c}</span></div>`)
       .join('') || '<div style="color:var(--text-faint);font-size:11.5px">No credentials logged.</div>';
-
     const pwList = Array.from(a.passwords.entries())
       .sort((x,y)=>y[1]-x[1]).slice(0,12)
       .map(([pw,c]) => `<div class="cred-row"><span class="pair">&bull; <b>${esc(pw)}</b></span><span class="pair">${c}&times;</span></div>`)
       .join('') || '<div style="color:var(--text-faint);font-size:11.5px">No passwords logged.</div>';
-
     const cmds = a.cmdList.slice(-30).reverse()
       .map(c => `<div class="cmd-line ${c.dangerous?'danger':''}">${c.dangerous?'&#9888; ':'$ '}<b>${esc(c.cmd)}</b></div>`)
-      .join('') || '<div style="color:var(--text-faint);font-size:11.5px">No commands executed &mdash; auth-only probing.</div>';
-
+      .join('') || '<div style="color:var(--text-faint);font-size:11.5px">No commands executed.</div>';
     els.drawer.innerHTML = `
       <div class="drawer-head">
         <div class="drawer-ip">${flag} ${esc(a.ip)}</div>
@@ -488,6 +696,10 @@
         <div class="drawer-badges">
           <span class="badge ${p}">${patternLabel[p]}</span>
           ${a.breached ? '<span class="badge brute">breached</span>' : ''}
+        </div>
+        <div class="drawer-actions">
+          <button class="btn" id="blockBtn">block this ip</button>
+          ${a.cmdList.length ? '<button class="btn" id="replayBtn">replay session</button>' : ''}
         </div>
       </div>
       <div class="drawer-section">
@@ -508,69 +720,298 @@
       </div>
       <div class="drawer-section">
         <h4>commands (most recent first)</h4>
-        ${cmds}
+        <div class="replay-bar" id="replayBar" style="display:none;">
+          <button class="btn" id="replayPauseBtn">pause</button>
+          <div class="replay-progress"><div class="replay-progress-fill" id="replayProgressFill"></div></div>
+        </div>
+        <div class="term" id="replayTerm" style="display:none;"></div>
+        <div id="cmdListStatic">${cmds}</div>
       </div>
     `;
+
+    const blockBtn = document.getElementById('blockBtn');
+    if(blockBtn) blockBtn.addEventListener('click', (e) => showBlockFlyout(e.currentTarget, a.ip));
+
+    const replayBtn = document.getElementById('replayBtn');
+    if(replayBtn) replayBtn.addEventListener('click', () => startReplay(a));
   }
 
+  // ============================================
+  // BLOCKLIST HELPER (copy-paste command, not a real firewall action)
+  // ============================================
+  function showBlockFlyout(anchor, ip){
+    document.querySelectorAll('.block-flyout').forEach(f => f.remove());
+    const rect = anchor.getBoundingClientRect();
+    const fly = document.createElement('div');
+    fly.className = 'block-flyout';
+    fly.style.top = (rect.bottom + window.scrollY + 6) + 'px';
+    fly.style.left = Math.max(8, rect.left - 140) + 'px';
+    const iptables = `sudo iptables -A INPUT -s ${ip} -j DROP`;
+    const fail2ban = `sudo fail2ban-client set sshd banip ${ip}`;
+    const ufw = `sudo ufw deny from ${ip}`;
+    fly.innerHTML = `
+      <span class="close-x" id="flyClose">&times;</span>
+      <div style="color:var(--text-dim);">Block ${esc(ip)} at the OS/firewall level.<br/>These are not run automatically - copy and run on your host.</div>
+      <div class="label">iptables</div>
+      <div class="cmd-box" data-cmd="${esc(iptables)}">${esc(iptables)}</div>
+      <div class="label">fail2ban (if configured for sshd)</div>
+      <div class="cmd-box" data-cmd="${esc(fail2ban)}">${esc(fail2ban)}</div>
+      <div class="label">ufw</div>
+      <div class="cmd-box" data-cmd="${esc(ufw)}">${esc(ufw)}</div>
+    `;
+    document.body.appendChild(fly);
+    fly.querySelectorAll('.cmd-box').forEach(box => {
+      box.addEventListener('click', () => {
+        const cmd = box.getAttribute('data-cmd');
+        navigator.clipboard && navigator.clipboard.writeText(cmd).then(() => {
+          const orig = box.textContent;
+          box.textContent = 'copied to clipboard';
+          setTimeout(() => { box.textContent = orig; }, 1200);
+        }).catch(() => {});
+      });
+    });
+    document.getElementById('flyClose').addEventListener('click', () => fly.remove());
+    setTimeout(() => {
+      document.addEventListener('click', function onDoc(ev){
+        if(!fly.contains(ev.target) && ev.target !== anchor){
+          fly.remove();
+          document.removeEventListener('click', onDoc);
+        }
+      });
+    }, 10);
+  }
+
+  // ============================================
+  // SESSION REPLAY - steps through a session's commands like a terminal
+  // ============================================
+  function startReplay(a){
+    if(state.replayTimer) clearInterval(state.replayTimer);
+    const term = document.getElementById('replayTerm');
+    const bar = document.getElementById('replayBar');
+    const fill = document.getElementById('replayProgressFill');
+    const staticList = document.getElementById('cmdListStatic');
+    const pauseBtn = document.getElementById('replayPauseBtn');
+    if(!term || !a.cmdList.length) return;
+
+    const cmds = a.cmdList.slice();
+    term.style.display = 'block';
+    bar.style.display = 'flex';
+    staticList.style.display = 'none';
+    term.innerHTML = '';
+    state.replaying = true;
+
+    let i = 0;
+    function typeNext(){
+      if(i >= cmds.length){
+        term.innerHTML += `\n<span class="prompt">[session ended]</span>`;
+        term.scrollTop = term.scrollHeight;
+        state.replaying = false;
+        clearInterval(state.replayTimer);
+        return;
+      }
+      const c = cmds[i];
+      term.innerHTML += `<span class="prompt">${esc(a.ip)}$</span> ${esc(c.cmd)}\n`;
+      term.scrollTop = term.scrollHeight;
+      fill.style.width = Math.round(((i+1)/cmds.length)*100) + '%';
+      i++;
+    }
+    typeNext();
+    state.replayTimer = setInterval(() => { if(state.replaying) typeNext(); }, 700);
+
+    pauseBtn.addEventListener('click', () => {
+      state.replaying = !state.replaying;
+      pauseBtn.textContent = state.replaying ? 'pause' : 'resume';
+    });
+  }
+
+  // ============================================
+  // MAP (equirectangular dot-plot, no external tiles/deps)
+  // ============================================
+  const MAP_W = 720, MAP_H = 360;
+  function geoToXY(lat, lon){
+    const x = (lon + 180) / 360 * MAP_W;
+    const y = (90 - lat) / 180 * MAP_H;
+    return [x, y];
+  }
+  let mapBuilt = false;
+  function renderMap(){
+    const withGeo = Array.from(state.attackers.values()).filter(a => a.geo && a.geo.lat && a.geo.lon);
+    if(withGeo.length === 0){
+      els.mapWrap.innerHTML = '<div class="map-empty">No geolocated attackers yet.</div>';
+      mapBuilt = false;
+      return;
+    }
+    if(!mapBuilt){
+      // simple continent-outline hint via a light graticule; avoids depending on external map tiles/GeoJSON
+      let svg = `<svg viewBox="0 0 ${MAP_W} ${MAP_H}" preserveAspectRatio="xMidYMid meet">`;
+      svg += `<rect x="0" y="0" width="${MAP_W}" height="${MAP_H}" fill="var(--surface)"/>`;
+      for(let lon=-180; lon<=180; lon+=30){
+        const [x] = geoToXY(0, lon);
+        svg += `<line x1="${x}" y1="0" x2="${x}" y2="${MAP_H}" stroke="var(--line-lite)" stroke-width="0.5"/>`;
+      }
+      for(let lat=-60; lat<=60; lat+=30){
+        const [,y] = geoToXY(lat, 0);
+        svg += `<line x1="0" y1="${y}" x2="${MAP_W}" y2="${y}" stroke="var(--line-lite)" stroke-width="0.5"/>`;
+      }
+      svg += `<g id="mapDots"></g>`;
+      svg += `</svg>`;
+      els.mapWrap.innerHTML = svg + `<div class="map-legend">
+        <span><i class="sw" style="background:var(--amber)"></i>probed</span>
+        <span><i class="sw" style="background:var(--red)"></i>breached</span>
+      </div>`;
+      mapBuilt = true;
+    }
+    const dotsGroup = els.mapWrap.querySelector('#mapDots');
+    if(!dotsGroup) return;
+    dotsGroup.innerHTML = withGeo.map(a => {
+      const [x,y] = geoToXY(a.geo.lat, a.geo.lon);
+      const r = Math.min(3 + Math.sqrt(a.attempts), 12);
+      const title = `${esc(a.ip)} - ${esc(a.geo.city||'')}, ${esc(a.geo.country||'')} (${a.attempts} attempts)`;
+      return `<circle class="map-dot ${a.breached?'breach':''}" cx="${x}" cy="${y}" r="${r}" data-ip="${esc(a.ip)}"><title>${title}</title></circle>`;
+    }).join('');
+    dotsGroup.querySelectorAll('circle').forEach(c => {
+      c.addEventListener('click', () => selectAttacker(c.getAttribute('data-ip')));
+    });
+  }
+
+  function switchView(view){
+    state.activeView = view;
+    document.querySelectorAll('.view-tab').forEach(t => t.classList.toggle('active', t.getAttribute('data-view') === view));
+    els.viewFeed.classList.toggle('hidden', view !== 'feed');
+    els.viewMap.classList.toggle('hidden', view !== 'map');
+    if(view === 'map') renderMap();
+  }
+
+  function renderMetrics(){
+    let failed=0, success=0, cmds=0;
+    for(const l of state.logs){
+      if(l.type === 'auth'){ if(l.status==='SUCCESS') success++; else failed++; }
+      else if(l.type === 'command') cmds++;
+    }
+    els.mUnique.textContent = state.attackers.size;
+    els.mFailed.textContent = failed;
+    els.mSuccess.textContent = success;
+    els.mCmds.textContent = cmds;
+  }
+  function renderThreat(patterns){
+    if(!patterns) return;
+    const score = patterns.attack_score || 0;
+    els.threatScore.textContent = score;
+    els.gaugeFill.style.width = score + '%';
+    els.gaugeFill.style.background = score >= 70 ? 'var(--red)' : score >= 35 ? 'var(--amber)' : 'var(--teal)';
+    els.threatSub.textContent = score >= 70 ? 'high volume of hostile probing'
+                               : score >= 35 ? 'sustained probing activity'
+                               : score > 0   ? 'low-level scanning'
+                               : 'no significant activity';
+    const at = patterns.attack_types || {};
+    els.sBrute.textContent = at.bruteforce || 0;
+    els.sSpray.textContent = at.password_spray || 0;
+    els.sDict.textContent = at.dictionary || 0;
+    els.sCountries.textContent = Object.keys(patterns.geo_distribution || {}).length;
+  }
   async function loadInitial(){
+    // restore whatever we had persisted from a previous page load first,
+    // so a refresh doesn't lose everything while the server fetch is in flight
+    const persisted = loadPersisted();
     try{
       const res = await fetch('/api/logs?limit=1000');
-      const logs = await res.json();
-      logs.forEach(ingest);
+      const serverLogs = await res.json();
+      // merge: persisted history + fresh server logs, de-duplicated by ingest() itself
+      const combined = persisted.concat(serverLogs);
+
+      processedIds.clear();
+      seenLiveIds.clear();
+      state.liveEntries = [];
+      state.logs = [];
+      state.attackers.clear();
+      state.totalAdded = 0;
+      state.totalDuplicates = 0;
+
+      combined.forEach(entry => ingest(entry, false));
+      state.initialLoadComplete = true;
+      combined.forEach(entry => {
+        const logId = getLogId(entry);
+        if (!seenLiveIds.has(logId)) {
+          seenLiveIds.add(logId);
+          state.liveEntries.push(entry);
+        }
+      });
+      if (state.liveEntries.length > state.maxLiveEntries) {
+        state.liveEntries = state.liveEntries.slice(-state.maxLiveEntries);
+      }
       renderMetrics();
-      renderTable();
-      els.lastEvent.textContent = logs.length ? ('loaded ' + logs.length + ' events') : 'no events yet';
+      renderSourceTable();
+      renderLiveFeed();
+      saveState();
+      els.lastEvent.textContent = combined.length ? (`loaded ${state.totalAdded} unique events` + (state.totalDuplicates > 0 ? ` (${state.totalDuplicates} duplicates skipped)` : '')) : 'no events yet';
+      els.dupStats.textContent = state.totalDuplicates > 0 ? `${state.totalDuplicates} dup` : '';
     }catch(e){
-      els.lastEvent.textContent = 'failed to load logs';
+      // server fetch failed - fall back to whatever was persisted so the page isn't empty
+      if(persisted.length){
+        persisted.forEach(entry => ingest(entry, false));
+        state.initialLoadComplete = true;
+        renderMetrics();
+        renderSourceTable();
+        renderLiveFeed();
+      }
+      els.lastEvent.textContent = 'failed to load logs from server' + (persisted.length ? ' (showing cached data)' : '');
     }
     refreshPatterns();
   }
-
   async function refreshPatterns(){
     try{
       const res = await fetch('/api/patterns');
       const patterns = await res.json();
       renderThreat(patterns);
-    }catch(e){ /* dashboard still usable without this */ }
+    }catch(e){}
   }
-
   function connectStream(){
     const src = new EventSource('/api/stream');
+    let streamActive = false;
     src.onopen = () => {
       els.liveDot.classList.add('live');
       els.connState.textContent = 'connected';
+      streamActive = true;
     };
     src.onerror = () => {
       els.liveDot.classList.remove('live');
       els.connState.textContent = 'reconnecting\u2026';
+      streamActive = false;
     };
     src.onmessage = (ev) => {
-      if(state.paused) return;
+      if(state.paused || !streamActive) return;
       try{
         const data = JSON.parse(ev.data);
         if(data && data.type === 'connected') return;
         const arr = Array.isArray(data) ? data : [data];
-        arr.forEach(ingest);
-        renderMetrics();
-        renderTable();
-        if(state.selectedIp) renderDrawer();
-        if(arr.length){
-          const last = arr[arr.length-1];
-          els.lastEvent.textContent = 'last: ' + (last.type==='auth' ? (last.status||'auth') : 'command') + ' from ' + last.ip;
+        let newCount = 0;
+        arr.forEach(entry => {
+          const before = state.totalAdded;
+          ingest(entry, true);
+          if (state.totalAdded > before) newCount++;
+        });
+        if (newCount > 0) {
+          renderMetrics();
+          renderSourceTable();
+          renderLiveFeed();
+          if(state.activeView === 'map') renderMap();
+          if(state.selectedIp && !state.replaying) renderDrawer();
+          els.lastEvent.textContent = `+${newCount} new events (${state.totalDuplicates} total dup)`;
+          els.dupStats.textContent = state.totalDuplicates > 0 ? `${state.totalDuplicates} dup` : '';
+          saveState();
         }
-      }catch(e){ /* ignore malformed frame */ }
+      }catch(e){}
     };
   }
-
-  els.search.addEventListener('input', (e) => { state.filter = e.target.value; renderTable(); });
-  document.querySelectorAll('.sortbtn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.sortbtn').forEach(b=>b.classList.remove('active'));
-      btn.classList.add('active');
-      state.sortMode = btn.getAttribute('data-sort');
-      renderTable();
-    });
+  els.liveSearch.addEventListener('input', (e) => {
+    state.liveFilter = e.target.value;
+    els.liveFilterBadge.textContent = state.liveFilter ? `filter: "${state.liveFilter}"` : 'all';
+    renderLiveFeed();
+  });
+  els.clearFeed.addEventListener('click', () => {
+    state.liveEntries = [];
+    seenLiveIds.clear();
+    renderLiveFeed();
   });
   els.pauseBtn.addEventListener('click', () => {
     state.paused = !state.paused;
@@ -580,16 +1021,17 @@
   els.exportCsv.addEventListener('click', () => {
     window.location.href = '/api/export?format=csv&limit=2000';
   });
-
+  document.querySelectorAll('.view-tab').forEach(tab => {
+    tab.addEventListener('click', () => switchView(tab.getAttribute('data-view')));
+  });
+  // ask for notification permission on first click anywhere (browsers block silent auto-requests)
+  document.addEventListener('click', requestNotifyPermission, { once: true });
   function tickClock(){
     els.clock.textContent = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
   }
   setInterval(tickClock, 1000);
   tickClock();
-
   setInterval(refreshPatterns, 15000);
-  setInterval(() => { if(!state.paused){ renderTable(); if(state.selectedIp) renderDrawer(); } }, 20000);
-
   loadInitial();
   connectStream();
 })();

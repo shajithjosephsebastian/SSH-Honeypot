@@ -59,12 +59,19 @@ a menu to start/stop/monitor the services.
 **Start the honeypot:**
 
 ```bash
-sudo python3 honeypot.py
+python3 honeypot.py
 ```
 
-`sudo` is required because the script listens on port 22 by default, which
-is a privileged port on Linux. A host RSA key (`host_rsa_key`) is generated
+By default the honeypot listens on **port 2222**, a non-privileged port,
+so no `sudo`/root is needed. A host RSA key (`host_rsa_key`) is generated
 automatically on first run if one doesn't already exist.
+
+Test it with:
+
+```bash
+ssh -p 2222 root@localhost
+# password: password123   (see FAKE_USERS in honeypot.py for the full list)
+```
 
 **Start the web dashboard** (in a separate terminal):
 
@@ -80,28 +87,20 @@ The dashboard is served at **http://localhost:5000**.
 ./run.sh
 ```
 
-### Choosing a port
+### Using port 22 instead
 
-Port 22 conflicts with a real SSH daemon if one is running on the same
-host, and requires root. For local testing or running alongside a real
-SSH server, it's safer to use a non-privileged port such as `2222`:
+If you want the honeypot to look like a real SSH server to internet
+traffic, change the port back to 22:
 
 ```python
 # honeypot.py
-PORT = 2222
+PORT = 22
 ```
 
-With a non-privileged port you don't need `sudo`, and you can connect to
-test it with:
-
-```bash
-ssh -p 2222 root@localhost
-# password: password123   (see FAKE_USERS in honeypot.py for the full list)
-```
-
-If you do run it on port 22 against real internet traffic, make sure the
-real SSH daemon (if any) is moved to a different port first, or the
-honeypot is deployed on a dedicated/isolated host.
+This requires running with `sudo` (22 is a privileged port on Linux) and
+will conflict with any real SSH daemon on the same host — move the real
+one to a different port first, or run the honeypot on a dedicated/isolated
+host.
 
 ## Decoy credentials
 
@@ -117,6 +116,37 @@ add, remove, or change credentials.
 - The web dashboard re-parses this file continuously, so you don't need a
   separate structured log format — just tail `honeypot.log` if you want
   raw output, or use the dashboard/API for structured/filterable data.
+
+## Dashboard features
+
+The dashboard (`templates/index.html`) is an operator console built around
+the attacking IP as the unit of investigation, not a flat log feed:
+
+- **Source table** — every attacking IP, grouped and sorted by attempts,
+  commands run, or recency. Each row shows a live-computed pattern badge:
+  `brute-force`, `pw spray`, `dictionary`, or `probe`.
+- **Live feed / map toggle** — a real-time event ticker (with search) or a
+  world map plotting attacker locations by lat/lon (from the GeoIP data),
+  sized by attempt count and colored red if that IP has breached.
+- **Session detail drawer** — click any IP to see everything it did: every
+  username and password tried, every command run (dangerous ones like
+  `rm`, `wget`, `chmod 777` are flagged), first/last seen, geo and ISP.
+- **Session replay** — replays a selected attacker's commands one at a
+  time in a terminal-style view, so you can watch what they did in order.
+- **Block-IP helper** — copies a ready-to-run `iptables` / `fail2ban` /
+  `ufw` command for that IP to your clipboard. This does **not** modify
+  your firewall automatically — it's a copy-paste convenience; you review
+  and run the command yourself.
+- **Alerts** — a toast notification (plus a short beep and, if you grant
+  permission, a browser notification) fires when:
+  - any IP successfully authenticates (a "breach"), or
+  - any IP racks up 5+ failed logins within a 2-minute window.
+- **Persistence** — session data (the log feed, per-IP aggregates) is
+  cached in the browser's `localStorage`, so refreshing the dashboard
+  doesn't lose what's been observed; it re-syncs with `honeypot.log` on
+  load and merges the two.
+- **CSV export** and a **pause** toggle for the live stream are in the top
+  bar.
 
 ## Web dashboard API
 

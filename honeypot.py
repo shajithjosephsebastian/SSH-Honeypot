@@ -20,7 +20,7 @@ from logging.handlers import RotatingFileHandler
 # =============================================
 
 HOST = '0.0.0.0'
-PORT = 22
+PORT = 2222
 LOG_FILE = 'honeypot.log'
 MAX_LOG_SIZE = 10 * 1024 * 1024  # 10MB
 BACKUP_COUNT = 5

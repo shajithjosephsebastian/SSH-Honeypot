@@ -8,9 +8,7 @@ import re
 from threading import Thread, Lock
 from collections import deque
 import sys
-import socket
 import requests
-from urllib.parse import urlencode
 
 app = Flask(__name__)
 LOG_FILE = 'honeypot.log'
@@ -19,31 +17,23 @@ MAX_LOGS = 2000
 log_cache = deque(maxlen=MAX_LOGS)
 cache_lock = Lock()
 last_read_pos = 0
+file_inode = None
 is_running = True
 clients = []
 
-# GeoIP cache to avoid rate limiting
+# GeoIP cache
 geo_cache = {}
 geo_cache_lock = Lock()
 
-# Track active brute force attacks
-active_attacks = {}
-attack_lock = Lock()
-notified_ips = set()
-notified_timestamps = {}
-
 def get_geoip(ip):
-    """Get GeoIP information for an IP address using free API"""
     if ip in ['127.0.0.1', 'localhost', '0.0.0.0', '::1']:
         return {'country': 'Local', 'city': 'Local', 'flag': '🏠', 'country_code': 'LO'}
     
-    # Check cache first
     with geo_cache_lock:
         if ip in geo_cache:
             return geo_cache[ip]
     
     try:
-        # Using free ip-api.com
         response = requests.get(f'http://ip-api.com/json/{ip}', timeout=3)
         if response.status_code == 200:
             data = response.json()
@@ -62,7 +52,7 @@ def get_geoip(ip):
                 with geo_cache_lock:
                     geo_cache[ip] = result
                 return result
-    except Exception as e:
+    except:
         pass
     
     result = {'country': 'Unknown', 'city': 'Unknown', 'flag': '🌐', 'country_code': 'UN'}
@@ -71,7 +61,6 @@ def get_geoip(ip):
     return result
 
 def get_country_flag(country_code):
-    """Get emoji flag for country code"""
     flags = {
         'US': '🇺🇸', 'GB': '🇬🇧', 'CN': '🇨🇳', 'RU': '🇷🇺', 'DE': '🇩🇪',
         'FR': '🇫🇷', 'JP': '🇯🇵', 'IN': '🇮🇳', 'BR': '🇧🇷', 'CA': '🇨🇦',
@@ -81,159 +70,42 @@ def get_country_flag(country_code):
         'AE': '🇦🇪', 'SG': '🇸🇬', 'MY': '🇲🇾', 'ID': '🇮🇩', 'PH': '🇵🇭',
         'VN': '🇻🇳', 'TH': '🇹🇭', 'NZ': '🇳🇿', 'ZA': '🇿🇦', 'EG': '🇪🇬',
         'NG': '🇳🇬', 'KE': '🇰🇪', 'AR': '🇦🇷', 'CL': '🇨🇱', 'CO': '🇨🇴',
-        'MX': '🇲🇽', 'PE': '🇵🇪', 'VE': '🇻🇪', 'PK': '🇵🇰', 'BD': '🇧🇩',
-        'IR': '🇮🇷', 'IQ': '🇮🇶', 'SY': '🇸🇾', 'JO': '🇯🇴', 'LB': '🇱🇧',
-        'KW': '🇰🇼', 'QA': '🇶🇦', 'OM': '🇴🇲', 'YE': '🇾🇪', 'BH': '🇧🇭',
-        'HK': '🇭🇰', 'TW': '🇹🇼', 'MO': '🇲🇴', 'KP': '🇰🇵', 'MN': '🇲🇳'
+        'MX': '🇲🇽', 'PE': '🇵🇪', 'VE': '🇻🇪', 'PK': '🇵🇰', 'BD': '🇧🇩'
     }
     return flags.get(country_code, '🌐')
 
-def is_attack_active(ip):
-    """Check if an IP is currently performing a brute force attack"""
-    with attack_lock:
-        if ip in active_attacks:
-            # Check if attack is still active (within last 5 minutes)
-            last_seen = active_attacks[ip]
-            if (datetime.datetime.now() - last_seen).seconds < 300:  # 5 minutes
-                return True
-            else:
-                # Attack expired
-                del active_attacks[ip]
-                return False
-    return False
-
-def update_attack_activity(ip):
-    """Update the last seen time for an attack"""
-    with attack_lock:
-        active_attacks[ip] = datetime.datetime.now()
-
-def get_attack_patterns():
-    """Analyze attack patterns from logs"""
-    with cache_lock:
-        logs = list(log_cache)
-    
-    patterns = {
-        'top_usernames': {},
-        'top_passwords': {},
-        'attack_types': {
-            'bruteforce': 0,
-            'dictionary': 0,
-            'password_spray': 0
-        },
-        'hourly_activity': [0] * 24,
-        'daily_activity': [0] * 7,
-        'geo_distribution': {},
-        'unique_ips': set(),
-        'successful_ips': set(),
-        'failed_ips': set(),
-        'total_auth': 0,
-        'total_failed': 0,
-        'total_success': 0,
-        'total_commands': 0,
-        'attack_score': 0
-    }
-    
-    # Track failed attempts per IP for attack detection
-    ip_failed_attempts = {}
-    
-    for log in logs:
-        if log.get('type') == 'auth':
-            ip = log.get('ip')
-            username = log.get('username', '')
-            password = log.get('password', '')
-            status = log.get('status')
-            geo = log.get('geo', {})
-            
-            patterns['total_auth'] += 1
-            
-            if status == 'SUCCESS':
-                patterns['total_success'] += 1
-                patterns['successful_ips'].add(ip)
-            else:
-                patterns['total_failed'] += 1
-                patterns['failed_ips'].add(ip)
-                
-                # Track failed attempts per IP
-                if ip not in ip_failed_attempts:
-                    ip_failed_attempts[ip] = []
-                ip_failed_attempts[ip].append(log)
-                
-                # Update attack activity for brute force detection
-                update_attack_activity(ip)
-            
-            patterns['unique_ips'].add(ip)
-            
-            # Track usernames
-            if username:
-                patterns['top_usernames'][username] = patterns['top_usernames'].get(username, 0) + 1
-            
-            # Track passwords
-            if password:
-                patterns['top_passwords'][password] = patterns['top_passwords'].get(password, 0) + 1
-            
-            # Geo distribution
-            country = geo.get('country', 'Unknown')
-            patterns['geo_distribution'][country] = patterns['geo_distribution'].get(country, 0) + 1
-            
-            # Time-based analysis
-            if log.get('timestamp'):
-                try:
-                    dt = datetime.datetime.fromisoformat(log['timestamp'])
-                    patterns['hourly_activity'][dt.hour] += 1
-                    patterns['daily_activity'][dt.weekday()] += 1
-                except:
-                    pass
-        
-        elif log.get('type') == 'command':
-            patterns['total_commands'] += 1
-    
-    # Detect attack types
-    for ip, attempts in ip_failed_attempts.items():
-        if len(attempts) >= 5:
-            patterns['attack_types']['bruteforce'] += 1
-            
-            # Check for dictionary attack (many different passwords)
-            passwords = set(a.get('password', '') for a in attempts if a.get('password'))
-            if 3 <= len(passwords) <= 15:
-                patterns['attack_types']['dictionary'] += 1
-            
-            # Check for password spraying (same password, different usernames)
-            usernames = set(a.get('username', '') for a in attempts if a.get('username'))
-            if len(usernames) >= 3 and len(passwords) <= 2:
-                patterns['attack_types']['password_spray'] += 1
-    
-    # Calculate attack score (0-100)
-    total_attempts = patterns['total_auth'] or 1
-    failed_ratio = patterns['total_failed'] / total_attempts
-    unique_ratio = len(patterns['unique_ips']) / (total_attempts or 1)
-    
-    patterns['attack_score'] = min(100, int(
-        (failed_ratio * 60) +  # 60% weight on failure ratio
-        (unique_ratio * 20) +   # 20% weight on unique IPs
-        (patterns['attack_types']['bruteforce'] * 5)  # 20% weight on brute force
-    ))
-    
-    # Sort and limit
-    patterns['top_usernames'] = dict(sorted(patterns['top_usernames'].items(), key=lambda x: x[1], reverse=True)[:20])
-    patterns['top_passwords'] = dict(sorted(patterns['top_passwords'].items(), key=lambda x: x[1], reverse=True)[:20])
-    
-    # Convert sets to counts
-    patterns['unique_ips_count'] = len(patterns['unique_ips'])
-    patterns['successful_ips_count'] = len(patterns['successful_ips'])
-    patterns['failed_ips_count'] = len(patterns['failed_ips'])
-    
-    return patterns
+def get_file_inode(filepath):
+    """Get file inode to detect log rotation"""
+    try:
+        return os.stat(filepath).st_ino
+    except:
+        return None
 
 def parse_log_line(line):
-    """Parse a log line into structured data with GeoIP"""
+    """Parse a log line from your honeypot"""
     try:
         line = line.strip()
         
-        # Format 1: [timestamp] ip - username:password - STATUS
-        # Example: [2026-08-19T15:13:40.190154] 192.168.0.139 - admin:pasdf - ❌ FAILED
-        auth_match = re.match(r'\[(.*?)\]\s+([\d.]+)\s+-\s+([^:]+):(.+?)\s+-\s+[✅❌]?\s*(\w+)$', line)
-        if auth_match:
-            timestamp, ip, username, password, status = auth_match.groups()
+        # Check if it's a command log
+        if 'ran:' in line:
+            match = re.search(r'\[(.*?)\]\s+([\d.]+)\s+-\s+([^\s]+)\s+ran:\s+(.+)$', line)
+            if match:
+                timestamp, ip, username, command = match.groups()
+                geo = get_geoip(ip.strip())
+                return {
+                    'timestamp': timestamp,
+                    'ip': ip.strip(),
+                    'username': username.strip(),
+                    'command': command.strip(),
+                    'type': 'command',
+                    'geo': geo,
+                    '_id': f"{timestamp}_{ip}_{username}_{command[:20]}"  # Unique ID to prevent duplicates
+                }
+        
+        # Check if it's an auth log
+        match = re.search(r'\[(.*?)\]\s+([\d.]+)\s+-\s+([^:]+):(.+?)\s+-\s+(SUCCESS|FAILED)$', line)
+        if match:
+            timestamp, ip, username, password, status = match.groups()
             geo = get_geoip(ip.strip())
             return {
                 'timestamp': timestamp,
@@ -242,62 +114,9 @@ def parse_log_line(line):
                 'password': password.strip(),
                 'status': status.strip(),
                 'type': 'auth',
-                'geo': geo
+                'geo': geo,
+                '_id': f"{timestamp}_{ip}_{username}_{password}"  # Unique ID to prevent duplicates
             }
-        
-        # Format 2: [timestamp] ip - username ran: command
-        # Example: [2026-08-19T15:13:52.411375] 192.168.0.139 - admin ran: ls
-        cmd_match = re.match(r'\[(.*?)\]\s+([\d.]+)\s+-\s+([^\s]+)\s+ran:\s+(.+)$', line)
-        if cmd_match:
-            timestamp, ip, username, command = cmd_match.groups()
-            geo = get_geoip(ip.strip())
-            return {
-                'timestamp': timestamp,
-                'ip': ip.strip(),
-                'username': username.strip(),
-                'command': command.strip(),
-                'type': 'command',
-                'geo': geo
-            }
-        
-        # Format 3: timestamp | ip | username | password | status
-        parts = line.split(' | ')
-        if len(parts) >= 5:
-            if parts[4].startswith('COMMAND:'):
-                geo = get_geoip(parts[1].strip())
-                return {
-                    'timestamp': parts[0],
-                    'ip': parts[1].strip(),
-                    'username': parts[2].strip(),
-                    'command': parts[4].replace('COMMAND:', '').strip(),
-                    'type': 'command',
-                    'geo': geo
-                }
-            else:
-                geo = get_geoip(parts[1].strip())
-                return {
-                    'timestamp': parts[0],
-                    'ip': parts[1].strip(),
-                    'username': parts[2].strip(),
-                    'password': parts[3].strip(),
-                    'status': parts[4].strip(),
-                    'type': 'auth',
-                    'geo': geo
-                }
-        
-        # Format 4: timestamp | ip | username | COMMAND: command
-        if ' | ' in line and 'COMMAND:' in line:
-            parts = line.split(' | ')
-            if len(parts) >= 4:
-                geo = get_geoip(parts[1].strip())
-                return {
-                    'timestamp': parts[0],
-                    'ip': parts[1].strip(),
-                    'username': parts[2].strip(),
-                    'command': parts[3].replace('COMMAND:', '').strip(),
-                    'type': 'command',
-                    'geo': geo
-                }
                 
     except Exception as e:
         pass
@@ -305,31 +124,46 @@ def parse_log_line(line):
 
 def load_initial_logs():
     """Load existing logs from file"""
+    global last_read_pos, file_inode
+    
     with cache_lock:
         log_cache.clear()
+        last_read_pos = 0
+        
         if os.path.exists(LOG_FILE):
             try:
+                file_inode = get_file_inode(LOG_FILE)
                 with open(LOG_FILE, 'r') as f:
                     lines = f.readlines()
                     for line in lines[-MAX_LOGS:]:
                         parsed = parse_log_line(line)
                         if parsed:
-                            log_cache.append(parsed)
-                print(f"✅ Loaded {len(log_cache)} logs from {LOG_FILE}")
+                            # Check for duplicates before adding
+                            if not any(log.get('_id') == parsed['_id'] for log in log_cache):
+                                log_cache.append(parsed)
+                    last_read_pos = f.tell()
+                print(f"✅ Loaded {len(log_cache)} unique logs from {LOG_FILE}")
             except Exception as e:
                 print(f"Error reading log file: {e}")
 
 def monitor_logs():
-    """Background thread to monitor log file changes and notify clients"""
-    global last_read_pos
+    """Background thread to monitor log file changes"""
+    global last_read_pos, file_inode
     
     while is_running:
-        time.sleep(0.3)
+        time.sleep(0.5)
         
         if not os.path.exists(LOG_FILE):
             continue
             
         try:
+            # Check if file was rotated (inode changed)
+            current_inode = get_file_inode(LOG_FILE)
+            if current_inode != file_inode:
+                print("🔄 Log file rotated, reloading...")
+                load_initial_logs()
+                continue
+            
             current_size = os.path.getsize(LOG_FILE)
             if current_size > last_read_pos:
                 new_logs = []
@@ -341,12 +175,15 @@ def monitor_logs():
                         for line in new_lines:
                             parsed = parse_log_line(line)
                             if parsed:
-                                log_cache.append(parsed)
-                                new_logs.append(parsed)
+                                # Check for duplicates before adding
+                                if not any(log.get('_id') == parsed['_id'] for log in log_cache):
+                                    log_cache.append(parsed)
+                                    new_logs.append(parsed)
                     
                     last_read_pos = f.tell()
                 
                 if new_logs:
+                    print(f"📝 Added {len(new_logs)} new logs")
                     notify_clients(new_logs)
         except Exception as e:
             pass
@@ -361,7 +198,6 @@ def notify_clients(new_logs):
             clients.remove(client)
 
 class Client:
-    """Simple client class for SSE"""
     def __init__(self):
         self.queue = deque()
         self.active = True
@@ -410,7 +246,16 @@ def get_logs():
     if ip_filter:
         logs = [log for log in logs if log.get('ip') == ip_filter]
     
-    return jsonify(logs[-limit:])
+    # Remove duplicates based on _id
+    seen = set()
+    unique_logs = []
+    for log in logs[-limit:]:
+        log_id = log.get('_id', log.get('timestamp', '') + log.get('ip', ''))
+        if log_id not in seen:
+            seen.add(log_id)
+            unique_logs.append(log)
+    
+    return jsonify(unique_logs)
 
 @app.route('/api/stats')
 def get_stats():
@@ -418,15 +263,23 @@ def get_stats():
     with cache_lock:
         logs = list(log_cache)
     
-    total_auth = sum(1 for log in logs if log.get('type') == 'auth')
-    total_commands = sum(1 for log in logs if log.get('type') == 'command')
-    successful_logins = sum(1 for log in logs if log.get('status') == 'SUCCESS')
-    failed_logins = sum(1 for log in logs if log.get('status') == 'FAILED')
-    unique_ips = len(set(log.get('ip', '') for log in logs if log.get('ip')))
-    
-    # Count usernames
-    username_count = {}
+    # Remove duplicates for stats
+    seen = set()
+    unique_logs = []
     for log in logs:
+        log_id = log.get('_id', log.get('timestamp', '') + log.get('ip', ''))
+        if log_id not in seen:
+            seen.add(log_id)
+            unique_logs.append(log)
+    
+    total_auth = sum(1 for log in unique_logs if log.get('type') == 'auth')
+    total_commands = sum(1 for log in unique_logs if log.get('type') == 'command')
+    successful_logins = sum(1 for log in unique_logs if log.get('status') == 'SUCCESS')
+    failed_logins = sum(1 for log in unique_logs if log.get('status') == 'FAILED')
+    unique_ips = len(set(log.get('ip', '') for log in unique_logs if log.get('ip')))
+    
+    username_count = {}
+    for log in unique_logs:
         if log.get('type') == 'auth':
             username = log.get('username', '')
             username_count[username] = username_count.get(username, 0) + 1
@@ -434,7 +287,7 @@ def get_stats():
     top_usernames = sorted(username_count.items(), key=lambda x: x[1], reverse=True)[:10]
     
     return jsonify({
-        'total_logs': len(logs),
+        'total_logs': len(unique_logs),
         'total_auth_attempts': total_auth,
         'total_commands': total_commands,
         'successful_logins': successful_logins,
@@ -446,14 +299,75 @@ def get_stats():
 @app.route('/api/patterns')
 def get_patterns():
     """API endpoint to get attack patterns"""
-    patterns = get_attack_patterns()
+    with cache_lock:
+        logs = list(log_cache)
+    
+    # Remove duplicates
+    seen = set()
+    unique_logs = []
+    for log in logs:
+        log_id = log.get('_id', log.get('timestamp', '') + log.get('ip', ''))
+        if log_id not in seen:
+            seen.add(log_id)
+            unique_logs.append(log)
+    
+    patterns = {
+        'top_usernames': {},
+        'top_passwords': {},
+        'attack_types': {'bruteforce': 0, 'dictionary': 0, 'password_spray': 0},
+        'geo_distribution': {},
+        'total_auth': 0,
+        'total_success': 0,
+        'total_failed': 0,
+        'total_commands': 0,
+        'attack_score': 0
+    }
+    
+    ip_failed = {}
+    
+    for log in unique_logs:
+        if log.get('type') == 'auth':
+            ip = log.get('ip')
+            username = log.get('username', '')
+            password = log.get('password', '')
+            status = log.get('status')
+            geo = log.get('geo', {})
+            
+            patterns['total_auth'] += 1
+            
+            if status == 'SUCCESS':
+                patterns['total_success'] += 1
+            else:
+                patterns['total_failed'] += 1
+                if ip not in ip_failed:
+                    ip_failed[ip] = []
+                ip_failed[ip].append(log)
+            
+            if username:
+                patterns['top_usernames'][username] = patterns['top_usernames'].get(username, 0) + 1
+            if password:
+                patterns['top_passwords'][password] = patterns['top_passwords'].get(password, 0) + 1
+            
+            country = geo.get('country', 'Unknown')
+            patterns['geo_distribution'][country] = patterns['geo_distribution'].get(country, 0) + 1
+        
+        elif log.get('type') == 'command':
+            patterns['total_commands'] += 1
+    
+    # Detect attack types
+    for ip, attempts in ip_failed.items():
+        if len(attempts) >= 5:
+            patterns['attack_types']['bruteforce'] += 1
+    
+    # Calculate attack score
+    total = patterns['total_auth'] or 1
+    failed_ratio = patterns['total_failed'] / total
+    patterns['attack_score'] = min(100, int(failed_ratio * 100))
+    
+    patterns['top_usernames'] = dict(sorted(patterns['top_usernames'].items(), key=lambda x: x[1], reverse=True)[:20])
+    patterns['top_passwords'] = dict(sorted(patterns['top_passwords'].items(), key=lambda x: x[1], reverse=True)[:20])
+    
     return jsonify(patterns)
-
-@app.route('/api/geo/<ip>')
-def get_geo(ip):
-    """API endpoint to get GeoIP for a specific IP"""
-    geo = get_geoip(ip)
-    return jsonify(geo)
 
 @app.route('/api/stream')
 def stream():
@@ -468,7 +382,15 @@ def stream():
             with cache_lock:
                 existing_logs = list(log_cache)
             if existing_logs:
-                yield f"data: {json.dumps(existing_logs[-50:])}\n\n"
+                # Send unique logs only
+                seen = set()
+                unique_logs = []
+                for log in existing_logs[-50:]:
+                    log_id = log.get('_id', log.get('timestamp', '') + log.get('ip', ''))
+                    if log_id not in seen:
+                        seen.add(log_id)
+                        unique_logs.append(log)
+                yield f"data: {json.dumps(unique_logs)}\n\n"
             
             while is_running and client.active:
                 data = client.get()
@@ -488,66 +410,61 @@ def stream():
     
     return Response(stream_with_context(generate()), mimetype='text/event-stream')
 
-@app.route('/api/clear')
-def clear_logs():
-    """Clear the log cache (doesn't delete file)"""
-    with cache_lock:
-        log_cache.clear()
-    return jsonify({'status': 'cleared'})
-
 @app.route('/api/export')
 def export_logs():
     """Export logs in CSV format"""
-    format_type = request.args.get('format', 'csv')
     limit = request.args.get('limit', 1000, type=int)
     
     with cache_lock:
-        logs = list(log_cache)[-limit:]
+        logs = list(log_cache)
     
-    if format_type == 'csv':
-        import csv
-        from io import StringIO
-        
-        output = StringIO()
-        writer = csv.writer(output)
-        writer.writerow(['Timestamp', 'IP', 'Username', 'Password', 'Status', 'Type', 'Command', 'Country', 'City'])
-        
-        for log in logs:
-            geo = log.get('geo', {})
-            writer.writerow([
-                log.get('timestamp', ''),
-                log.get('ip', ''),
-                log.get('username', ''),
-                log.get('password', ''),
-                log.get('status', ''),
-                log.get('type', ''),
-                log.get('command', ''),
-                geo.get('country', ''),
-                geo.get('city', '')
-            ])
-        
-        response = Response(output.getvalue(), mimetype='text/csv')
-        response.headers['Content-Disposition'] = f'attachment; filename=honeypot_logs_{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
-        return response
+    # Remove duplicates
+    seen = set()
+    unique_logs = []
+    for log in logs[-limit:]:
+        log_id = log.get('_id', log.get('timestamp', '') + log.get('ip', ''))
+        if log_id not in seen:
+            seen.add(log_id)
+            unique_logs.append(log)
     
-    elif format_type == 'json':
-        return jsonify(logs)
+    import csv
+    from io import StringIO
     
-    return jsonify({'error': 'Invalid format'}), 400
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Timestamp', 'IP', 'Username', 'Password', 'Status', 'Type', 'Command', 'Country'])
+    
+    for log in unique_logs:
+        geo = log.get('geo', {})
+        writer.writerow([
+            log.get('timestamp', ''),
+            log.get('ip', ''),
+            log.get('username', ''),
+            log.get('password', ''),
+            log.get('status', ''),
+            log.get('type', ''),
+            log.get('command', ''),
+            geo.get('country', '')
+        ])
+    
+    response = Response(output.getvalue(), mimetype='text/csv')
+    response.headers['Content-Disposition'] = f'attachment; filename=honeypot_logs_{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
+    return response
+
+@app.route('/api/clear-cache')
+def clear_cache():
+    """Clear the log cache"""
+    with cache_lock:
+        log_cache.clear()
+    return jsonify({'status': 'cleared'})
 
 @app.errorhandler(404)
 def not_found(e):
     return jsonify({'error': 'Not found'}), 404
 
-@app.errorhandler(500)
-def server_error(e):
-    return jsonify({'error': 'Internal server error'}), 500
-
 if __name__ == '__main__':
-    # Load initial logs
     load_initial_logs()
     
-    # Start log monitor thread
     monitor_thread = Thread(target=monitor_logs, daemon=True)
     monitor_thread.start()
     
@@ -555,13 +472,10 @@ if __name__ == '__main__':
     print("🌐  SSH HONEYPOT WEB INTERFACE")
     print("=" * 70)
     print(f"📡 Web interface running on: http://localhost:5000")
-    print(f"📝 Viewing logs from: {LOG_FILE}")
-    print(f"🌍 GeoIP tracking: Enabled")
-    print(f"📊 Attack pattern analysis: Enabled")
-    print(f"🔒 Brute force notification cooldown: 1 minute")
+    print(f"📝 Reading logs from: {LOG_FILE}")
+    print(f"✅ Loaded {len(log_cache)} unique logs")
     print("=" * 70)
     print("✅ Web interface is RUNNING")
-    print(f"✅ Loaded {len(log_cache)} logs")
     print("   Press Ctrl+C to stop")
     print("=" * 70)
     

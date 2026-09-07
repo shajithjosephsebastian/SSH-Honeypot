@@ -17,7 +17,7 @@ BOLD='\033[1m'
 # Configuration
 HONEYPOT_SCRIPT="honeypot.py"
 INTERFACE_SCRIPT="interface.py"
-HONEYPOT_PORT=22
+HONEYPOT_PORT=2222
 WEB_PORT=5000
 LOG_FILE="honeypot.log"
 REQUIREMENTS_FILE="requirements.txt"
@@ -31,10 +31,10 @@ print_banner() {
     echo -e "${BLUE}${BOLD}"
     echo "╔════════════════════════════════════════════════════════════╗"
     echo "║                                                            ║"
-    echo "║   🛡️  SSH Honeypot - Security Monitoring System          ║"
+    echo "║   🛡️  SSH Honeypot - Security Monitoring System            ║"
     echo "║                                                            ║"
-    echo "║   ${CYAN}🔐 Honeypot     : Port ${HONEYPOT_PORT}${BLUE}                        ║"
-    echo "║   ${CYAN}🌐 Web Interface : http://localhost:${WEB_PORT}${BLUE}              ║"
+    echo "║   ${CYAN}🔐 Honeypot     : Port ${HONEYPOT_PORT}${BLUE}    ║"
+    echo "║   ${CYAN}🌐 Web Interface : http://localhost:${WEB_PORT}${BLUE}║"
     echo "║                                                            ║"
     echo "╚════════════════════════════════════════════════════════════╝"
     echo -e "${NC}"
@@ -71,6 +71,20 @@ activate_venv() {
     fi
 }
 
+# FIX: map each requirements.txt package name to its real importable module
+# name. `python -c "import $PACKAGE"` previously used the PyPI package name
+# verbatim (e.g. "Flask", "flask-cors"), but the actual importable modules
+# are lowercase "flask" and underscored "flask_cors" - so those two were
+# ALWAYS reported as "Missing" and reinstalled on every single launch, even
+# when already present. paramiko and requests happen to match already.
+package_to_import_name() {
+    case "$1" in
+        Flask) echo "flask" ;;
+        flask-cors) echo "flask_cors" ;;
+        *) echo "$1" | tr '-' '_' ;;  # sensible default for anything else added later
+    esac
+}
+
 check_requirements() {
     echo -e "${YELLOW}📦 Checking Python dependencies...${NC}"
     
@@ -86,7 +100,8 @@ check_requirements() {
         while IFS= read -r line || [ -n "$line" ]; do
             [[ -z "$line" || "$line" =~ ^# ]] && continue
             PACKAGE=$(echo "$line" | sed -E 's/([^>=<~!]+).*/\1/' | xargs)
-            if ! python -c "import $PACKAGE" 2>/dev/null; then
+            IMPORT_NAME=$(package_to_import_name "$PACKAGE")
+            if ! python -c "import $IMPORT_NAME" 2>/dev/null; then
                 echo -e "${YELLOW}⚠️  Missing: $PACKAGE${NC}"
                 MISSING=1
             fi
@@ -206,12 +221,23 @@ fix_network() {
 check_ports() {
     echo -e "${YELLOW}🔍 Checking ports...${NC}"
     
-    # Check if port 22 is in use
+    # Check if the honeypot port is in use
     if lsof -Pi :$HONEYPOT_PORT -sTCP:LISTEN -t >/dev/null 2>&1; then
         echo -e "${YELLOW}⚠️  Port $HONEYPOT_PORT is already in use${NC}"
-        echo -e "${BLUE}   This might be your system's SSH service.${NC}"
+        # FIX: this used to unconditionally say "This might be your system's
+        # SSH service", which only makes sense when HONEYPOT_PORT is 22.
+        # The default is now 2222, so only show that hint for port 22.
+        if [ "$HONEYPOT_PORT" == "22" ]; then
+            echo -e "${BLUE}   This might be your system's SSH service.${NC}"
+        else
+            echo -e "${BLUE}   Another process is already using this port.${NC}"
+        fi
         echo -e "${BLUE}   Options:${NC}"
-        echo -e "${BLUE}   1. Stop system SSH: sudo systemctl stop ssh${NC}"
+        if [ "$HONEYPOT_PORT" == "22" ]; then
+            echo -e "${BLUE}   1. Stop system SSH: sudo systemctl stop ssh${NC}"
+        else
+            echo -e "${BLUE}   1. Stop whatever is using port $HONEYPOT_PORT${NC}"
+        fi
         echo -e "${BLUE}   2. Change HONEYPOT_PORT in run.sh${NC}"
         echo -e "${BLUE}   3. Keep both running (honeypot on different port)${NC}"
         echo ""
@@ -366,8 +392,8 @@ show_status() {
     echo ""
     echo -e "${YELLOW}💡 Quick Commands:${NC}"
     echo -e "   ${BLUE}▶${NC} View logs: ${CYAN}tail -f ${LOG_FILE}${NC}"
-    echo -e "   ${BLUE}▶${NC} Test connection: ${CYAN}ssh root@localhost${NC}"
-    echo -e "   ${BLUE}▶${NC} Test from network: ${CYAN}ssh root@$(get_current_ip)${NC}"
+    echo -e "   ${BLUE}▶${NC} Test connection: ${CYAN}ssh -p ${HONEYPOT_PORT} root@localhost${NC}"
+    echo -e "   ${BLUE}▶${NC} Test from network: ${CYAN}ssh -p ${HONEYPOT_PORT} root@$(get_current_ip)${NC}"
     echo -e "   ${BLUE}▶${NC} Stop services: ${CYAN}Press Ctrl+C${NC}"
     echo ""
     echo -e "${YELLOW}📊 Monitoring:${NC}"

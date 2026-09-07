@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>honeypot :: console</title>
+<title>Honeypot - Dashboard</title>
 <style>
   :root{
     --bg:        #0a0d12;
@@ -18,6 +18,7 @@
     --amber-dim: #8a662a;
     --teal:      #5fb3a3;
     --red:       #d9695f;
+    --purple:    #a78bfa;
     --font: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
     --radius: 3px;
   }
@@ -30,6 +31,7 @@
   a{ color:inherit; }
   button{ font-family:inherit; }
   .shell{ height:100vh; display:grid; grid-template-rows:auto 1fr auto; }
+
   .topbar{
     height:40px; display:flex; align-items:center; gap:18px;
     padding:0 14px; border-bottom:1px solid var(--line);
@@ -58,7 +60,9 @@
   }
   .btn:hover{ border-color:var(--text-faint); color:var(--text); }
   .btn.active{ border-color:var(--amber-dim); color:var(--amber); }
-  .main{ display:grid; grid-template-columns:280px 1fr 320px; min-height:0; }
+  .btn.danger:hover{ border-color:var(--red); color:var(--red); }
+
+  .main{ display:grid; grid-template-columns:250px 1fr 320px; min-height:0; }
   .pane{ min-height:0; overflow:hidden; display:flex; flex-direction:column; }
   .pane + .pane{ border-left:1px solid var(--line); }
   .pane-head{
@@ -67,6 +71,8 @@
     display:flex; align-items:center; justify-content:space-between;
   }
   .pane-head .count{ color:var(--text-dim); font-weight:500; }
+
+  /* ===== left: threat gauge + sources ===== */
   .gauge-wrap{ padding:16px 14px 10px; border-bottom:1px solid var(--line-lite); }
   .gauge-label{ font-size:10.5px; color:var(--text-faint); letter-spacing:.06em; margin-bottom:8px; }
   .gauge-num{ font-size:34px; font-weight:600; line-height:1; font-variant-numeric:tabular-nums; }
@@ -75,8 +81,11 @@
   .gauge-fill{ height:100%; background:var(--teal); transition:width .5s ease, background .3s ease; width:0%; }
   .gauge-sub{ margin-top:8px; font-size:11px; color:var(--text-dim); }
   .rail-stats{ padding:10px 14px; border-bottom:1px solid var(--line-lite); display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .rail-stat{ cursor:pointer; }
   .rail-stat b{ display:block; font-size:17px; font-weight:600; font-variant-numeric:tabular-nums; }
   .rail-stat span{ font-size:10.5px; color:var(--text-faint); }
+  .rail-stat:hover b{ color:var(--amber); }
+
   .source-table-wrap{ flex:1; overflow-y:auto; min-height:0; }
   .source-table{ width:100%; border-collapse:collapse; }
   .source-table thead th{
@@ -92,68 +101,97 @@
   .source-table .flag{ font-size:12px; }
   .source-table .ip-mono{ color:var(--text); font-size:11px; }
   .source-table .geo-sub{ color:var(--text-faint); font-size:9px; }
-  .source-table .badge{ font-size:8px; padding:1px 6px; border-radius:8px; font-weight:600; letter-spacing:.03em; }
-  .source-table .badge.brute{ background:rgba(217,105,95,.15); color:var(--red); }
-  .source-table .badge.spray{ background:rgba(232,163,61,.15); color:var(--amber); }
-  .source-table .badge.dict{ background:rgba(95,179,163,.15); color:var(--teal); }
-  .source-table .badge.probe{ background:rgba(124,136,152,.15); color:var(--text-dim); }
   .source-table .num-cell{ font-variant-numeric:tabular-nums; color:var(--text-dim); text-align:right; font-size:10px; }
   .source-table .num-cell.hot{ color:var(--red); font-weight:600; }
   .source-table .time-cell{ color:var(--text-faint); font-size:10px; white-space:nowrap; }
-  .source-table .breached{ color:var(--amber); font-size:10px; }
-  .live-feed{
-    flex:1; overflow-y:auto; padding:4px 0; min-height:0;
-    background:var(--bg);
+
+  .badge{ display:inline-block; padding:1px 7px; border-radius:9px; font-size:10px; font-weight:600; letter-spacing:.03em; }
+  .badge.brute{ background:rgba(217,105,95,.15); color:var(--red); }
+  .badge.spray{ background:rgba(232,163,61,.15); color:var(--amber); }
+  .badge.dict{ background:rgba(95,179,163,.15); color:var(--teal); }
+  .badge.probe{ background:rgba(124,136,152,.15); color:var(--text-dim); }
+  .badge.mini{ font-size:8px; padding:1px 6px; }
+
+  /* ===== center: toolbar + filters + view toggle ===== */
+  .center-toolbar{ border-bottom:1px solid var(--line-lite); flex-shrink:0; }
+  .view-tabs{ display:flex; gap:4px; padding:7px 12px 0; }
+  .view-tab{
+    background:transparent; border:1px solid var(--line); border-bottom:none; color:var(--text-faint);
+    padding:4px 11px; border-radius:var(--radius) var(--radius) 0 0; cursor:pointer; font-size:10.5px;
   }
-  .live-feed .empty-hint{
-    padding:30px 20px; color:var(--text-faint); font-size:12px; line-height:1.8; text-align:center;
+  .view-tab.active{ color:var(--amber); border-color:var(--amber-dim); background:var(--surface-2); }
+
+  .filter-row{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; padding:8px 12px; }
+  .filter-group{ display:flex; align-items:center; gap:4px; }
+  .filter-group label{ font-size:9px; color:var(--text-faint); text-transform:uppercase; letter-spacing:.04em; }
+  .filter-group select, .filter-group input{
+    background:var(--surface-2); border:1px solid var(--line); color:var(--text);
+    padding:4px 8px; border-radius:var(--radius); font-family:inherit; font-size:11px; outline:none;
   }
+  .filter-group select:focus, .filter-group input:focus{ border-color:var(--amber-dim); }
+  .filter-group input::placeholder{ color:var(--text-faint); }
+  .filter-group input#searchInput{ min-width:170px; }
+  .filter-group select{ max-width:150px; }
+  .clear-filters-btn{
+    background:transparent; border:1px solid var(--line); color:var(--text-faint);
+    padding:4px 9px; border-radius:var(--radius); cursor:pointer; font-size:10.5px; margin-left:auto;
+  }
+  .clear-filters-btn:hover{ border-color:var(--red); color:var(--red); }
+  .active-filters{ display:flex; gap:5px; flex-wrap:wrap; padding:0 12px 8px; }
+  .filter-badge{
+    display:inline-flex; align-items:center; gap:4px; background:var(--surface-2); border:1px solid var(--line);
+    padding:2px 8px; border-radius:9px; font-size:10px; color:var(--text-dim); cursor:default;
+  }
+  .filter-badge .remove{ color:var(--text-faint); cursor:pointer; font-weight:600; }
+  .filter-badge .remove:hover{ color:var(--red); }
+
+  .view-body{ flex:1; min-height:0; display:flex; flex-direction:column; }
+  .view-body.hidden{ display:none; }
+
+  /* combined feed */
+  .live-feed{ flex:1; overflow-y:auto; padding:4px 0; min-height:0; }
+  .live-feed .empty-hint{ padding:30px 20px; color:var(--text-faint); font-size:12px; line-height:1.8; text-align:center; }
   .tick{
     padding:5px 14px; font-size:11px; border-bottom:1px solid var(--line-lite);
-    display:flex; gap:10px; align-items:baseline; transition:background .1s;
-    animation: fadeIn 0.3s ease;
+    display:flex; gap:10px; align-items:baseline; animation: fadeIn 0.25s ease;
   }
-  @keyframes fadeIn{
-    from{ opacity:0; transform:translateX(-8px); }
-    to{ opacity:1; transform:translateX(0); }
-  }
+  @keyframes fadeIn{ from{ opacity:0; transform:translateX(-6px); } to{ opacity:1; transform:translateX(0); } }
   .tick:hover{ background:var(--surface-2); }
-  .tick .t{ color:var(--text-faint); flex-shrink:0; font-size:10px; min-width:70px; }
+  .tick .t{ color:var(--text-faint); flex-shrink:0; font-size:10px; min-width:66px; }
   .tick .m{ color:var(--text-dim); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .tick .m b{ color:var(--text); font-weight:500; }
-  .tick .m .highlight{ background:var(--surface-2); padding:0 4px; border-radius:2px; }
+  .tick .ip-link{ color:var(--teal); cursor:pointer; }
+  .tick .ip-link:hover{ text-decoration:underline; }
   .tick.fail .m b.st{ color:var(--red); }
   .tick.ok .m b.st{ color:var(--teal); }
   .tick.cmd .m b.st{ color:var(--amber); }
-  .tick .badge-mini{
-    font-size:8px; padding:1px 6px; border-radius:4px; flex-shrink:0;
-    background:var(--surface-2); color:var(--text-faint);
-  }
-  .tick .badge-mini.auth{ color:var(--text-dim); }
-  .tick .badge-mini.cmd{ color:var(--amber); border:1px solid rgba(232,163,61,.2); }
+  .tick .badge-mini{ font-size:8px; padding:1px 6px; border-radius:4px; flex-shrink:0; background:var(--surface-2); color:var(--text-faint); }
   .tick .badge-mini.success{ color:var(--teal); border:1px solid rgba(95,179,163,.2); }
   .tick .badge-mini.fail{ color:var(--red); border:1px solid rgba(217,105,95,.2); }
+  .tick .badge-mini.cmd{ color:var(--amber); border:1px solid rgba(232,163,61,.2); }
   .tick .flag{ font-size:12px; flex-shrink:0; }
-  .live-toolbar{
-    padding:6px 12px; border-bottom:1px solid var(--line-lite); flex-shrink:0;
-    display:flex; gap:8px; align-items:center;
+  .tick.bruteforce{ border-left:3px solid var(--amber); }
+
+  /* split view */
+  .split-body{ flex:1; display:grid; grid-template-columns:1fr 1fr; min-height:0; }
+  .split-col{ display:flex; flex-direction:column; min-height:0; }
+  .split-col + .split-col{ border-left:1px solid var(--line); }
+  .split-col-head{
+    padding:6px 12px; font-size:10px; color:var(--text-faint); border-bottom:1px solid var(--line-lite);
+    display:flex; justify-content:space-between; flex-shrink:0;
   }
-  .live-toolbar .search{
-    flex:1; background:var(--surface-2); border:1px solid var(--line); color:var(--text);
-    padding:4px 9px; border-radius:var(--radius); font-family:inherit; font-size:11px; outline:none;
-  }
-  .live-toolbar .search:focus{ border-color:var(--amber-dim); }
-  .live-toolbar .search::placeholder{ color:var(--text-faint); }
-  .live-toolbar .filter-badge{
-    font-size:10px; color:var(--text-faint); padding:2px 8px; background:var(--surface-2);
-    border-radius:var(--radius); border:1px solid var(--line);
-  }
+  .split-col-body{ flex:1; overflow-y:auto; min-height:0; }
+  .split-empty{ padding:24px 12px; color:var(--text-faint); font-size:11px; text-align:center; }
+
+  /* ===== right: drawer ===== */
   .drawer{ overflow-y:auto; min-height:0; }
   .drawer-empty{ padding:40px 20px; color:var(--text-faint); font-size:12px; line-height:1.7; text-align:center; }
   .drawer-head{ padding:14px; border-bottom:1px solid var(--line-lite); }
   .drawer-ip{ font-size:18px; font-weight:600; display:flex; align-items:center; gap:8px; }
   .drawer-geo{ color:var(--text-dim); font-size:11.5px; margin-top:4px; }
   .drawer-badges{ display:flex; gap:6px; margin-top:9px; flex-wrap:wrap; }
+  .drawer-actions{ display:flex; gap:6px; margin-top:10px; }
+  .drawer-actions .btn{ font-size:10px; padding:4px 8px; }
   .drawer-section{ padding:12px 14px; border-bottom:1px solid var(--line-lite); }
   .drawer-section h4{ font-size:10.5px; color:var(--text-faint); letter-spacing:.06em; font-weight:500; margin-bottom:9px; }
   .kv{ display:flex; justify-content:space-between; font-size:12px; padding:3px 0; }
@@ -166,76 +204,18 @@
   .cmd-line b{ color:var(--text); font-weight:500; }
   .cmd-line.danger{ color:var(--red); }
   .cmd-line.danger b{ color:var(--red); }
-  .statusbar{
-    height:26px; display:flex; align-items:center; gap:16px; padding:0 14px;
-    border-top:1px solid var(--line); background:var(--surface); font-size:10.5px; color:var(--text-faint);
-    flex-shrink:0;
-  }
-  .statusbar b{ color:var(--text-dim); font-weight:500; }
-  .badge{
-    display:inline-block; padding:1px 7px; border-radius:9px; font-size:10px; font-weight:600;
-    letter-spacing:.03em;
-  }
-  .badge.brute{ background:rgba(217,105,95,.15); color:var(--red); }
-  .badge.spray{ background:rgba(232,163,61,.15); color:var(--amber); }
-  .badge.dict{ background:rgba(95,179,163,.15); color:var(--teal); }
-  .badge.probe{ background:rgba(124,136,152,.15); color:var(--text-dim); }
-  @media (max-width: 1200px) {
-    .main{ grid-template-columns:220px 1fr 280px; }
-  }
-  @media (max-width: 992px) {
-    .main{ grid-template-columns:1fr; grid-template-rows:auto 1fr auto; }
-    .pane + .pane{ border-left:none; border-top:1px solid var(--line); }
-    .source-table-wrap{ max-height:200px; }
-    .live-feed{ max-height:400px; }
-    .drawer{ max-height:300px; }
-  }
 
-  /* ===== view tabs (feed / map) ===== */
-  .view-tabs{ display:flex; gap:4px; }
-  .view-tab{
-    background:transparent; border:1px solid var(--line); color:var(--text-faint);
-    padding:2px 9px; border-radius:var(--radius); cursor:pointer; font-size:10px;
+  .replay-bar{ display:flex; align-items:center; gap:8px; margin-top:8px; }
+  .replay-bar .btn{ font-size:10px; padding:4px 9px; }
+  .replay-progress{ flex:1; height:3px; background:var(--line); border-radius:2px; overflow:hidden; }
+  .replay-progress-fill{ height:100%; background:var(--teal); width:0%; transition:width .15s linear; }
+  .term{
+    background:#000; border:1px solid var(--line); border-radius:var(--radius); padding:10px;
+    font-size:11px; color:#8effa0; min-height:90px; max-height:220px; overflow-y:auto; margin-top:8px;
+    white-space:pre-wrap; word-break:break-all;
   }
-  .view-tab.active{ color:var(--amber); border-color:var(--amber-dim); }
-  .view-body{ flex:1; min-height:0; display:flex; flex-direction:column; }
-  .view-body.hidden{ display:none; }
+  .term .prompt{ color:var(--text-faint); }
 
-  /* ===== map ===== */
-  .map-wrap{ flex:1; min-height:0; position:relative; overflow:hidden; background:var(--bg); }
-  .map-wrap svg{ width:100%; height:100%; display:block; }
-  .map-land{ fill:var(--surface-2); stroke:var(--line); stroke-width:.5; }
-  .map-dot{ fill:var(--amber); opacity:.85; cursor:pointer; }
-  .map-dot.breach{ fill:var(--red); }
-  .map-dot:hover{ opacity:1; }
-  .map-legend{
-    position:absolute; bottom:10px; left:10px; font-size:10px; color:var(--text-faint);
-    background:rgba(16,20,27,.8); padding:6px 10px; border-radius:var(--radius); border:1px solid var(--line);
-    display:flex; gap:12px;
-  }
-  .map-legend span{ display:flex; align-items:center; gap:5px; }
-  .map-legend .sw{ width:7px; height:7px; border-radius:50%; display:inline-block; }
-  .map-empty{ display:flex; align-items:center; justify-content:center; height:100%; color:var(--text-faint); font-size:12px; }
-
-  /* ===== toast / alert ===== */
-  .toast-stack{ position:fixed; top:48px; right:14px; display:flex; flex-direction:column; gap:8px; z-index:50; max-width:320px; }
-  .toast{
-    background:var(--surface); border:1px solid var(--line); border-left:3px solid var(--amber);
-    border-radius:var(--radius); padding:9px 12px; font-size:11.5px; color:var(--text);
-    box-shadow:0 6px 20px rgba(0,0,0,.4); animation:toastIn .25s ease;
-  }
-  .toast.breach{ border-left-color:var(--red); }
-  .toast b{ display:block; font-size:11px; letter-spacing:.03em; margin-bottom:3px; }
-  .toast.breach b{ color:var(--red); }
-  .toast:not(.breach) b{ color:var(--amber); }
-  .toast .sub{ color:var(--text-dim); font-size:11px; }
-  @keyframes toastIn{ from{ opacity:0; transform:translateX(16px); } to{ opacity:1; transform:translateX(0); } }
-  .toast.out{ animation:toastOut .2s ease forwards; }
-  @keyframes toastOut{ to{ opacity:0; transform:translateX(16px); } }
-
-  /* ===== block button + replay controls in drawer ===== */
-  .drawer-actions{ display:flex; gap:6px; margin-top:10px; }
-  .drawer-actions .btn{ font-size:10px; padding:4px 8px; }
   .block-flyout{
     position:absolute; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
     padding:10px; font-size:11px; box-shadow:0 8px 24px rgba(0,0,0,.5); z-index:60; width:280px;
@@ -248,27 +228,67 @@
   .block-flyout .label{ color:var(--text-faint); font-size:9.5px; letter-spacing:.05em; margin-top:8px; }
   .block-flyout .close-x{ position:absolute; top:6px; right:8px; cursor:pointer; color:var(--text-faint); }
 
-  .replay-bar{ display:flex; align-items:center; gap:8px; margin-top:8px; }
-  .replay-bar .btn{ font-size:10px; padding:4px 9px; }
-  .replay-progress{ flex:1; height:3px; background:var(--line); border-radius:2px; overflow:hidden; }
-  .replay-progress-fill{ height:100%; background:var(--teal); width:0%; transition:width .15s linear; }
-  .term{
-    background:#000; border:1px solid var(--line); border-radius:var(--radius); padding:10px;
-    font-size:11px; color:#8effa0; min-height:90px; max-height:220px; overflow-y:auto; margin-top:8px;
-    white-space:pre-wrap; word-break:break-all;
+  /* ===== bottom status bar ===== */
+  .statusbar{
+    height:26px; display:flex; align-items:center; gap:16px; padding:0 14px;
+    border-top:1px solid var(--line); background:var(--surface); font-size:10.5px; color:var(--text-faint);
+    flex-shrink:0;
   }
-  .term .prompt{ color:var(--text-faint); }
-  .term .cursor{ display:inline-block; width:6px; height:12px; background:#8effa0; animation:blink 1s step-end infinite; vertical-align:middle; }
-  @keyframes blink{ 50%{ opacity:0; } }
+  .statusbar b{ color:var(--text-dim); font-weight:500; }
+
+  /* ===== toast notifications ===== */
+  .toast-stack{ position:fixed; top:48px; right:14px; display:flex; flex-direction:column; gap:8px; z-index:50; max-width:320px; }
+  .toast{
+    position:relative; background:var(--surface); border:1px solid var(--line); border-left:3px solid var(--amber);
+    border-radius:var(--radius); padding:9px 12px 12px; font-size:11.5px; color:var(--text);
+    box-shadow:0 6px 20px rgba(0,0,0,.4); animation:toastIn .25s ease; overflow:hidden;
+  }
+  .toast.breach{ border-left-color:var(--red); }
+  .toast .toast-title{ display:block; font-size:11px; letter-spacing:.03em; margin-bottom:3px; font-weight:600; }
+  .toast.breach .toast-title{ color:var(--red); }
+  .toast:not(.breach) .toast-title{ color:var(--amber); }
+  .toast .toast-title .count{ background:currentColor; color:var(--bg); padding:0 5px; border-radius:4px; font-size:9px; margin-left:4px; }
+  .toast .sub{ color:var(--text-dim); font-size:11px; }
+  .toast .sub .ip-link{ color:var(--teal); cursor:pointer; }
+  .toast-actions{ display:flex; gap:6px; margin-top:7px; }
+  .toast-actions button{ font-size:10px; padding:3px 9px; border-radius:var(--radius); cursor:pointer; font-family:inherit; border:1px solid var(--line); background:transparent; color:var(--text-dim); }
+  .toast-actions button.investigate{ background:var(--amber-dim); border-color:var(--amber-dim); color:#1a1400; font-weight:600; }
+  .toast .close-x{ position:absolute; top:6px; right:8px; cursor:pointer; color:var(--text-faint); font-size:13px; }
+  .toast .progress{ position:absolute; bottom:0; left:0; height:2px; background:var(--amber); animation:shrink 6s linear forwards; }
+  .toast.breach .progress{ background:var(--red); }
+  @keyframes toastIn{ from{ opacity:0; transform:translateX(16px); } to{ opacity:1; transform:translateX(0); } }
+  @keyframes shrink{ from{ width:100%; } to{ width:0%; } }
+  .toast.out{ animation:toastOut .2s ease forwards; }
+  @keyframes toastOut{ to{ opacity:0; transform:translateX(16px); } }
+
+  /* ===== confirm dialog ===== */
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:100;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .modal-box{
+    background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:18px;
+    width:320px; box-shadow:0 20px 60px rgba(0,0,0,.6);
+  }
+  .modal-box h3{ font-size:13px; margin-bottom:8px; color:var(--text); }
+  .modal-box p{ font-size:11.5px; color:var(--text-dim); line-height:1.6; margin-bottom:14px; }
+  .modal-actions{ display:flex; gap:8px; justify-content:flex-end; }
+  .modal-actions .btn.danger-solid{ background:var(--red); border-color:var(--red); color:#1a0a08; font-weight:600; }
+
+  @media (max-width: 1200px) {
+    .main{ grid-template-columns:210px 1fr 280px; }
+  }
 </style>
 </head>
 <body>
 <div class="toast-stack" id="toastStack"></div>
+<div id="modalRoot"></div>
+
 <div class="shell">
   <div class="topbar">
     <div class="brand">
       <span class="dot" id="liveDot"></span>
-      <b>honeypot</b><span>/ console</span>
+      <b>honeypot</b><span>/ dashboard</span>
     </div>
     <div class="topbar-mid">
       <div class="metric"><b id="mUnique">0</b><span>ips</span></div>
@@ -279,10 +299,14 @@
     <div class="topbar-right">
       <span class="clock" id="clock">--:--:--</span>
       <button class="btn" id="exportCsv">export csv</button>
+      <button class="btn danger" id="clearBtn">clear logs</button>
       <button class="btn" id="pauseBtn">pause</button>
     </div>
   </div>
+
   <div class="main">
+
+    <!-- LEFT: threat score + sources -->
     <div class="pane">
       <div class="gauge-wrap">
         <div class="gauge-label">threat score</div>
@@ -291,9 +315,9 @@
         <div class="gauge-sub" id="threatSub">awaiting data&hellip;</div>
       </div>
       <div class="rail-stats">
-        <div class="rail-stat"><b id="sBrute">0</b><span>brute-force</span></div>
-        <div class="rail-stat"><b id="sSpray">0</b><span>pw spray</span></div>
-        <div class="rail-stat"><b id="sDict">0</b><span>dictionary</span></div>
+        <div class="rail-stat" id="statBrute"><b id="sBrute">0</b><span>brute-force</span></div>
+        <div class="rail-stat" id="statSpray"><b id="sSpray">0</b><span>pw spray</span></div>
+        <div class="rail-stat" id="statDict"><b id="sDict">0</b><span>dictionary</span></div>
         <div class="rail-stat"><b id="sCountries">0</b><span>countries</span></div>
       </div>
       <div class="pane-head">
@@ -316,116 +340,142 @@
         </table>
       </div>
     </div>
+
+    <!-- CENTER: filters + toggleable combined/split view -->
     <div class="pane">
-      <div class="pane-head">
+      <div class="center-toolbar">
         <div class="view-tabs">
-          <button class="view-tab active" data-view="feed">live feed</button>
-          <button class="view-tab" data-view="map">map</button>
+          <button class="view-tab active" data-view="combined">combined feed</button>
+          <button class="view-tab" data-view="split">split view</button>
         </div>
-        <span class="count" id="liveCount">0</span>
+        <div class="filter-row">
+          <div class="filter-group">
+            <label>search</label>
+            <input type="text" id="searchInput" placeholder="ip, username, password, command&hellip;" />
+          </div>
+          <div class="filter-group">
+            <label>type</label>
+            <select id="typeFilter">
+              <option value="all">All</option>
+              <option value="auth">Auth</option>
+              <option value="command">Commands</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>status</label>
+            <select id="statusFilter">
+              <option value="all">All</option>
+              <option value="SUCCESS">Success</option>
+              <option value="FAILED">Failed</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>ip</label>
+            <select id="ipFilter"><option value="all">All IPs</option></select>
+          </div>
+          <div class="filter-group">
+            <label>sort</label>
+            <select id="sortFilter">
+              <option value="newest">Newest first</option>
+              <option value="oldest">Oldest first</option>
+              <option value="most_attempts">IP: most attempts</option>
+              <option value="most_commands">IP: most commands</option>
+            </select>
+          </div>
+          <button class="clear-filters-btn" id="clearFiltersBtn">clear filters</button>
+        </div>
+        <div class="active-filters" id="activeFilters"></div>
       </div>
 
-      <div class="view-body" id="viewFeed">
-        <div class="live-toolbar">
-          <input class="search" id="liveSearch" placeholder="filter live feed by ip, username, command&hellip;" />
-          <span class="filter-badge" id="liveFilterBadge">all</span>
-          <button class="btn" id="clearFeed" style="font-size:10px;padding:2px 8px;">clear</button>
-        </div>
+      <div class="view-body" id="viewCombined">
         <div class="live-feed" id="liveFeed">
-          <div class="empty-hint">
-            No activity yet.<br/>
-            <span style="font-size:11px;color:var(--text-faint);">
-              Connections will stream here in real-time as they hit the honeypot.
-            </span>
+          <div class="empty-hint">No activity yet.<br/><span style="font-size:11px;">Connections will stream here in real-time.</span></div>
+        </div>
+      </div>
+
+      <div class="view-body hidden" id="viewSplit">
+        <div class="split-body">
+          <div class="split-col">
+            <div class="split-col-head"><span>commands</span><span id="cmdColCount">0</span></div>
+            <div class="split-col-body" id="cmdCol"><div class="split-empty">No commands.</div></div>
+          </div>
+          <div class="split-col">
+            <div class="split-col-head"><span>auth attempts</span><span id="authColCount">0</span></div>
+            <div class="split-col-body" id="authCol"><div class="split-empty">No auth attempts.</div></div>
           </div>
         </div>
       </div>
-
-      <div class="view-body hidden" id="viewMap">
-        <div class="map-wrap" id="mapWrap">
-          <div class="map-empty">No geolocated attackers yet.</div>
-        </div>
-      </div>
     </div>
+
+    <!-- RIGHT: session detail drawer -->
     <div class="pane">
       <div class="pane-head">session detail</div>
       <div class="drawer" id="drawer">
-        <div class="drawer-empty">
-          Select a source from the left<br/>
-          to inspect its full session &mdash;<br/>
-          credentials tried, commands run,<br/>
-          and geo location.
-        </div>
+        <div class="drawer-empty">Select a source from the left<br/>to inspect its full session &mdash;<br/>credentials tried, commands run,<br/>and geo location.</div>
       </div>
     </div>
+
   </div>
+
   <div class="statusbar">
     <span id="connState">connecting&hellip;</span>
     <span>&middot;</span>
     <span>log source: <b>honeypot.log</b></span>
     <span>&middot;</span>
     <span id="lastEvent">no events yet</span>
-    <span style="margin-left:auto;" id="dupStats"></span>
   </div>
 </div>
+
 <script>
 (function(){
   "use strict";
-  const processedIds = new Set();
-  const seenLiveIds = new Set();
-  const state = {
-    logs: [], liveEntries: [], attackers: new Map(),
-    paused: false, selectedIp: null, sortMode: 'attempts', filter: '', liveFilter: '',
-    totalAdded: 0, totalDuplicates: 0, maxLiveEntries: 200, initialLoadComplete: false,
-    activeView: 'feed', replaying: false, replayTimer: null,
-    alertedBreaches: new Set(),   // ips we've already toasted a breach for
-    bruteWindowStarts: new Map()  // ip -> [timestamps of recent fails], for the 5-in-2min alert
-  };
-  const STORAGE_KEY = 'honeypot_console_state_v1';
-  const STORAGE_MAX_LOGS = 2000; // cap what we persist so localStorage doesn't grow unbounded
 
-  function saveState(){
-    try{
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        logs: state.logs.slice(-STORAGE_MAX_LOGS),
-        savedAt: Date.now()
-      }));
-    }catch(e){ /* storage full or unavailable - dashboard still works, just won't persist */ }
-  }
-  function loadPersisted(){
-    try{
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if(!raw) return [];
-      const parsed = JSON.parse(raw);
-      return Array.isArray(parsed.logs) ? parsed.logs : [];
-    }catch(e){ return []; }
-  }
+  // ============================================
+  // STATE
+  // ============================================
+  const processedIds = new Set();
+  const state = {
+    logs: [], attackers: new Map(),
+    paused: false, selectedIp: null, activeView: 'combined',
+    filters: { search:'', type:'all', status:'all', ip:'all', sort:'newest' },
+    totalAdded: 0, totalDuplicates: 0,
+    replaying: false, replayTimer: null,
+    alertedBreaches: new Set(),
+    bruteWindowStarts: new Map(),
+    bruteforceIPs: new Set(),
+    notifiedIPs: new Set(),
+    notifyTimestamps: {}
+  };
+  const STORAGE_KEY = 'honeypot_dashboard_state_v2';
+  const STORAGE_MAX_LOGS = 2000;
+  const BRUTE_THRESHOLD = 5;
+  const BRUTE_WINDOW_MS = 2 * 60 * 1000;
+  const NOTIFY_COOLDOWN_MS = 60 * 1000;
+
   const $ = (id) => document.getElementById(id);
   const els = {
     liveDot: $('liveDot'), connState: $('connState'), lastEvent: $('lastEvent'), clock: $('clock'),
     mUnique: $('mUnique'), mFailed: $('mFailed'), mSuccess: $('mSuccess'), mCmds: $('mCmds'),
     threatScore: $('threatScore'), gaugeFill: $('gaugeFill'), threatSub: $('threatSub'),
     sBrute: $('sBrute'), sSpray: $('sSpray'), sDict: $('sDict'), sCountries: $('sCountries'),
-    liveFeed: $('liveFeed'), liveSearch: $('liveSearch'), liveFilterBadge: $('liveFilterBadge'),
-    liveCount: $('liveCount'), clearFeed: $('clearFeed'),
+    statBrute: $('statBrute'), statSpray: $('statSpray'), statDict: $('statDict'),
     attackerRows: $('attackerRows'), drawer: $('drawer'), sourceCount: $('sourceCount'),
-    pauseBtn: $('pauseBtn'), exportCsv: $('exportCsv'),
-    dupStats: $('dupStats'),
-    toastStack: $('toastStack'), viewFeed: $('viewFeed'), viewMap: $('viewMap'), mapWrap: $('mapWrap')
+    pauseBtn: $('pauseBtn'), exportCsv: $('exportCsv'), clearBtn: $('clearBtn'),
+    toastStack: $('toastStack'), modalRoot: $('modalRoot'),
+    liveFeed: $('liveFeed'), viewCombined: $('viewCombined'), viewSplit: $('viewSplit'),
+    cmdCol: $('cmdCol'), authCol: $('authCol'), cmdColCount: $('cmdColCount'), authColCount: $('authColCount'),
+    searchInput: $('searchInput'), typeFilter: $('typeFilter'), statusFilter: $('statusFilter'),
+    ipFilter: $('ipFilter'), sortFilter: $('sortFilter'), clearFiltersBtn: $('clearFiltersBtn'),
+    activeFilters: $('activeFilters')
   };
-  function getLogId(entry) {
+
+  function getLogId(entry){
     const base = `${entry.timestamp}|${entry.ip}|${entry.username}`;
-    if (entry.type === 'auth') {
-      return `${base}|auth|${entry.password}|${entry.status}`;
-    } else {
-      return `${base}|cmd|${entry.command}`;
-    }
+    return entry.type === 'auth' ? `${base}|auth|${entry.password}|${entry.status}` : `${base}|cmd|${entry.command}`;
   }
   function fmtTime(iso){
-    try{
-      const d = new Date(iso);
-      return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
-    }catch(e){ return iso || '--'; }
+    try{ return new Date(iso).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'}); }
+    catch(e){ return iso || '--'; }
   }
   function relTime(iso){
     try{
@@ -449,70 +499,53 @@
     const c = cmd.toLowerCase();
     return DANGEROUS.some(d => c.includes(d));
   }
+
   // ============================================
-  // ALERTS: toast + sound + browser notification
+  // PERSISTENCE (localStorage) - with staleness detection
   // ============================================
-  let audioCtx = null;
-  function beep(freq, dur){
+  function saveState(){
     try{
-      if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.connect(gain); gain.connect(audioCtx.destination);
-      osc.frequency.value = freq;
-      osc.type = 'sine';
-      gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
-      osc.start();
-      osc.stop(audioCtx.currentTime + dur);
-    }catch(e){ /* audio not available/blocked until user interacts with the page - non-fatal */ }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ logs: state.logs.slice(-STORAGE_MAX_LOGS), savedAt: Date.now() }));
+    }catch(e){ /* storage full/unavailable - dashboard still works without persistence */ }
+  }
+  function loadPersisted(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed.logs) ? parsed.logs : [];
+    }catch(e){ return []; }
+  }
+  function clearPersisted(){
+    try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
+  }
+  /**
+   * FIX (found via real testing): previously, persisted localStorage logs
+   * were merged with the server's /api/logs response unconditionally. If
+   * the honeypot.log file was deleted/rotated/reset, the server correctly
+   * returns an empty (or much smaller) list, but the dashboard kept
+   * showing stale attackers/logs forever from localStorage, with numbers
+   * that disagreed with the live threat score (which IS server-truth).
+   * We now treat the server's log list as ground truth: if persisted
+   * history contains entries the server no longer has (by id) - meaning
+   * the log file was reset - we drop the stale cache instead of merging it.
+   */
+  function reconcilePersisted(persisted, serverLogs){
+    if(persisted.length === 0) return [];
+    const serverIds = new Set(serverLogs.map(getLogId));
+    const overlap = persisted.some(e => serverIds.has(getLogId(e)));
+    // If the server has logs but shares none of them with what we cached,
+    // the log file was very likely rotated/cleared - don't trust the cache.
+    if(serverLogs.length > 0 && !overlap){
+      clearPersisted();
+      return [];
+    }
+    return persisted;
   }
 
-  function toast(title, sub, kind){
-    const el = document.createElement('div');
-    el.className = 'toast' + (kind === 'breach' ? ' breach' : '');
-    el.innerHTML = `<b>${esc(title)}</b><span class="sub">${esc(sub)}</span>`;
-    els.toastStack.appendChild(el);
-    setTimeout(() => {
-      el.classList.add('out');
-      setTimeout(() => el.remove(), 220);
-    }, 6000);
-
-    if(kind === 'breach'){ beep(880, 0.35); setTimeout(()=>beep(660,0.35), 180); }
-    else { beep(520, 0.2); }
-
-    if('Notification' in window && Notification.permission === 'granted'){
-      try{ new Notification(title, { body: sub }); }catch(e){}
-    }
-  }
-
-  function requestNotifyPermission(){
-    if('Notification' in window && Notification.permission === 'default'){
-      Notification.requestPermission();
-    }
-  }
-
-  function checkAlerts(entry, a){
-    // breach alert: first successful login for this ip
-    if(entry.type === 'auth' && entry.status === 'SUCCESS' && !state.alertedBreaches.has(entry.ip)){
-      state.alertedBreaches.add(entry.ip);
-      toast('Breach detected', `${entry.ip} authenticated as "${entry.username}"`, 'breach');
-    }
-    // brute-force alert: 5+ failed attempts from one ip within a 2-minute window
-    if(entry.type === 'auth' && entry.status !== 'SUCCESS'){
-      const t = new Date(entry.timestamp).getTime();
-      if(!isNaN(t)){
-        let arr = state.bruteWindowStarts.get(entry.ip) || [];
-        arr.push(t);
-        arr = arr.filter(ts => t - ts <= 2*60*1000); // keep only last 2 minutes
-        state.bruteWindowStarts.set(entry.ip, arr);
-        if(arr.length === 5){ // fire once, right when it crosses the threshold
-          toast('Brute-force threshold', `${entry.ip} - 5 failed logins in under 2 minutes`, 'brute');
-        }
-      }
-    }
-  }
-
+  // ============================================
+  // ATTACKER AGGREGATION
+  // ============================================
   function getAttacker(ip){
     if(!state.attackers.has(ip)){
       state.attackers.set(ip, {
@@ -523,33 +556,20 @@
     }
     return state.attackers.get(ip);
   }
-  function ingest(entry, fromStream = false){
-    if(!entry || !entry.ip) return;
+
+  function ingest(entry, fromStream){
+    if(!entry || !entry.ip) return false;
     const logId = getLogId(entry);
-    if (processedIds.has(logId)) {
-      state.totalDuplicates++;
-      return;
-    }
+    if(processedIds.has(logId)){ state.totalDuplicates++; return false; }
     processedIds.add(logId);
     state.totalAdded++;
     state.logs.push(entry);
-    if (fromStream || state.initialLoadComplete) {
-      if (!seenLiveIds.has(logId)) {
-        seenLiveIds.add(logId);
-        state.liveEntries.push(entry);
-        if (state.liveEntries.length > state.maxLiveEntries) {
-          const removed = state.liveEntries.splice(0, state.liveEntries.length - state.maxLiveEntries);
-          removed.forEach(e => {
-            const id = getLogId(e);
-            seenLiveIds.delete(id);
-          });
-        }
-      }
-    }
+
     const a = getAttacker(entry.ip);
     if(entry.geo) a.geo = entry.geo;
     if(!a.firstSeen) a.firstSeen = entry.timestamp;
     a.lastSeen = entry.timestamp;
+
     if(entry.type === 'auth'){
       a.attempts++;
       if(entry.status === 'SUCCESS'){ a.success++; a.breached = true; }
@@ -561,7 +581,9 @@
       a.cmdList.push({cmd:entry.command, ts:entry.timestamp, dangerous:isDangerous(entry.command)});
     }
     if(fromStream) checkAlerts(entry, a);
+    return true;
   }
+
   function pattern(a){
     if(a.failed >= 5){
       const pw = a.passwords.size, un = a.usernames.size;
@@ -572,80 +594,267 @@
     return 'probe';
   }
   const patternLabel = {brute:'brute-force', spray:'pw spray', dict:'dictionary', probe:'probe'};
-  function renderLiveFeed(){
-    let entries = state.liveEntries;
-    const filter = state.liveFilter.trim().toLowerCase();
-    if(filter){
-      entries = entries.filter(e => {
-        if(e.ip.toLowerCase().includes(filter)) return true;
-        if(e.username && e.username.toLowerCase().includes(filter)) return true;
-        if(e.command && e.command.toLowerCase().includes(filter)) return true;
-        if(e.password && e.password.toLowerCase().includes(filter)) return true;
-        return false;
+
+  // ============================================
+  // BRUTE-FORCE DETECTION (client-side, mirrors server heuristic +
+  // adds the 2-minute sliding window alert)
+  // ============================================
+  function detectBruteforce(){
+    state.bruteforceIPs.clear();
+    const failedByIp = new Map();
+    state.logs.forEach(l => {
+      if(l.type === 'auth' && l.status !== 'SUCCESS'){
+        if(!failedByIp.has(l.ip)) failedByIp.set(l.ip, []);
+        failedByIp.get(l.ip).push(l);
+      }
+    });
+    failedByIp.forEach((attempts, ip) => {
+      attempts.sort((a,b) => (a.timestamp||'').localeCompare(b.timestamp||''));
+      for(let i=0;i<attempts.length;i++){
+        const start = new Date(attempts[i].timestamp).getTime();
+        let count = 1;
+        for(let j=i+1;j<attempts.length;j++){
+          const diff = (new Date(attempts[j].timestamp).getTime() - start)/1000;
+          if(diff <= 120) count++; else break;
+        }
+        if(count >= BRUTE_THRESHOLD){ state.bruteforceIPs.add(ip); break; }
+      }
+    });
+  }
+
+  function checkAlerts(entry, a){
+    if(entry.type === 'auth' && entry.status === 'SUCCESS' && !state.alertedBreaches.has(entry.ip)){
+      state.alertedBreaches.add(entry.ip);
+      toast('breach', 'Breach detected', `${entry.ip} authenticated as "${entry.username}"`, entry.ip);
+    }
+    if(entry.type === 'auth' && entry.status !== 'SUCCESS'){
+      const t = new Date(entry.timestamp).getTime();
+      if(!isNaN(t)){
+        let arr = state.bruteWindowStarts.get(entry.ip) || [];
+        arr.push(t);
+        arr = arr.filter(ts => t - ts <= BRUTE_WINDOW_MS);
+        state.bruteWindowStarts.set(entry.ip, arr);
+        if(arr.length >= BRUTE_THRESHOLD){
+          const last = state.notifyTimestamps[entry.ip] || 0;
+          if(Date.now() - last > NOTIFY_COOLDOWN_MS || !state.notifiedIPs.has(entry.ip)){
+            const failed = a.failed;
+            toast('brute', 'Brute-force detected', `${entry.ip} - ${failed} failed attempts in under 2 minutes`, entry.ip);
+            state.notifiedIPs.add(entry.ip);
+            state.notifyTimestamps[entry.ip] = Date.now();
+          }
+        }
+      }
+    }
+  }
+
+  // ============================================
+  // TOASTS (with investigate/dismiss, matches original UX)
+  // ============================================
+  let audioCtx = null;
+  function beep(freq, dur){
+    try{
+      if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      osc.frequency.value = freq; osc.type = 'sine';
+      gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+      osc.start(); osc.stop(audioCtx.currentTime + dur);
+    }catch(e){}
+  }
+  function requestNotifyPermission(){
+    if('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
+  }
+  function toast(kind, title, sub, ip){
+    const existing = document.getElementById('toast-' + ip);
+    if(existing) return; // don't stack duplicate toasts for the same ip while one is visible
+    const el = document.createElement('div');
+    el.className = 'toast' + (kind === 'breach' ? ' breach' : '');
+    el.id = 'toast-' + ip;
+    el.innerHTML = `
+      <span class="close-x" data-dismiss="${esc(ip)}">&times;</span>
+      <span class="toast-title">${esc(title)}</span>
+      <span class="sub"><span class="ip-link" data-investigate="${esc(ip)}">${esc(ip)}</span> ${esc(sub.replace(ip, '').trim())}</span>
+      <div class="toast-actions">
+        <button class="investigate" data-investigate="${esc(ip)}">Investigate</button>
+        <button data-dismiss="${esc(ip)}">Dismiss</button>
+      </div>
+      <div class="progress"></div>
+    `;
+    els.toastStack.appendChild(el);
+    const timer = setTimeout(() => dismissToast(ip), 6000);
+    el.dataset.timer = timer;
+    el.querySelectorAll('[data-dismiss]').forEach(b => b.addEventListener('click', () => dismissToast(ip)));
+    el.querySelectorAll('[data-investigate]').forEach(b => b.addEventListener('click', () => {
+      selectAttacker(ip);
+      dismissToast(ip);
+    }));
+    if(kind === 'breach'){ beep(880,0.35); setTimeout(()=>beep(660,0.35),180); } else { beep(520,0.2); }
+    if('Notification' in window && Notification.permission === 'granted'){
+      try{ new Notification(title, { body: sub }); }catch(e){}
+    }
+  }
+  function dismissToast(ip){
+    const el = document.getElementById('toast-' + ip);
+    if(!el) return;
+    clearTimeout(Number(el.dataset.timer));
+    el.classList.add('out');
+    setTimeout(() => el.remove(), 200);
+  }
+
+  // ============================================
+  // CONFIRM MODAL (real one, not a browser confirm())
+  // ============================================
+  function showConfirm(title, body, onConfirm){
+    els.modalRoot.innerHTML = `
+      <div class="modal-overlay" id="modalOverlay">
+        <div class="modal-box">
+          <h3>${esc(title)}</h3>
+          <p>${body}</p>
+          <div class="modal-actions">
+            <button class="btn" id="modalCancel">Cancel</button>
+            <button class="btn danger-solid" id="modalConfirm">Clear logs</button>
+          </div>
+        </div>
+      </div>
+    `;
+    document.getElementById('modalCancel').addEventListener('click', closeConfirm);
+    document.getElementById('modalOverlay').addEventListener('click', (e) => { if(e.target.id === 'modalOverlay') closeConfirm(); });
+    document.getElementById('modalConfirm').addEventListener('click', () => { closeConfirm(); onConfirm(); });
+  }
+  function closeConfirm(){ els.modalRoot.innerHTML = ''; }
+
+  // ============================================
+  // FILTERING + SORTING
+  // ============================================
+  function getFilteredLogs(){
+    let logs = state.logs.slice();
+    const f = state.filters;
+    if(f.ip !== 'all') logs = logs.filter(l => l.ip === f.ip);
+    if(f.type !== 'all') logs = logs.filter(l => l.type === f.type);
+    if(f.status !== 'all') logs = logs.filter(l => l.status === f.status);
+    if(f.search){
+      const s = f.search.toLowerCase();
+      logs = logs.filter(l =>
+        (l.ip||'').toLowerCase().includes(s) ||
+        (l.username||'').toLowerCase().includes(s) ||
+        (l.command||'').toLowerCase().includes(s) ||
+        (l.password||'').toLowerCase().includes(s)
+      );
+    }
+    if(f.sort === 'newest') logs.sort((a,b) => (b.timestamp||'').localeCompare(a.timestamp||''));
+    else if(f.sort === 'oldest') logs.sort((a,b) => (a.timestamp||'').localeCompare(b.timestamp||''));
+    else if(f.sort === 'most_attempts' || f.sort === 'most_commands'){
+      // sort by the owning attacker's aggregate, keeping newest-first within each ip
+      const key = f.sort === 'most_attempts' ? 'attempts' : 'commands';
+      logs.sort((a,b) => {
+        const aa = state.attackers.get(a.ip), bb = state.attackers.get(b.ip);
+        const diff = (bb ? bb[key] : 0) - (aa ? aa[key] : 0);
+        if(diff !== 0) return diff;
+        return (b.timestamp||'').localeCompare(a.timestamp||'');
       });
     }
-    els.liveCount.textContent = state.liveEntries.length;
-    if(entries.length === 0){
-      els.liveFeed.innerHTML = `<div class="empty-hint">
-        ${state.liveEntries.length === 0 ?
-          'No activity yet.<br/><span style="font-size:11px;color:var(--text-faint);">Connections will stream here in real-time.</span>' :
-          'No entries match your filter.'}
-      </div>`;
-      return;
-    }
-    let html = '';
-    entries.slice().reverse().forEach(e => {
-      let cls = 'tick';
-      let content = '';
-      const flag = (e.geo && e.geo.flag) || '\ud83c\udf10';
-      if(e.type === 'auth'){
-        cls += e.status === 'SUCCESS' ? ' ok' : ' fail';
-        const verb = e.status === 'SUCCESS' ? 'authenticated as' : 'tried';
-        const badge = e.status === 'SUCCESS' ? 'success' : 'fail';
-        content = `
-          <span class="t">${fmtTime(e.timestamp)}</span>
-          <span class="flag">${flag}</span>
-          <span class="m"><b>${esc(e.ip)}</b> ${verb} <b class="st">${esc(e.username)}</b></span>
-          <span class="badge-mini ${badge}">${e.status}</span>
-        `;
-      } else {
-        cls += ' cmd';
-        const danger = isDangerous(e.command) ? '&#9888; ' : '';
-        content = `
-          <span class="t">${fmtTime(e.timestamp)}</span>
-          <span class="flag">${flag}</span>
-          <span class="m"><b>${esc(e.ip)}</b> ran <b class="st">${danger}${esc(e.command)}</b></span>
-          <span class="badge-mini cmd">cmd</span>
-        `;
-      }
-      html += `<div class="${cls}">${content}</div>`;
-    });
-    els.liveFeed.innerHTML = html;
+    return logs;
   }
+
+  function updateIPSelector(){
+    const current = els.ipFilter.value;
+    let html = '<option value="all">All IPs</option>';
+    Array.from(state.attackers.values())
+      .sort((a,b) => b.attempts - a.attempts)
+      .forEach(a => {
+        const bf = state.bruteforceIPs.has(a.ip) ? ' \u26a1' : '';
+        html += `<option value="${esc(a.ip)}">${esc(a.ip)} (${a.attempts}${bf})</option>`;
+      });
+    els.ipFilter.innerHTML = html;
+    if(state.attackers.has(current)) els.ipFilter.value = current;
+    else els.ipFilter.value = 'all';
+  }
+
+  function updateActiveFilterBadges(){
+    const f = state.filters;
+    const badges = [];
+    if(f.type !== 'all') badges.push({key:'type', label:'type: '+f.type});
+    if(f.status !== 'all') badges.push({key:'status', label:'status: '+f.status});
+    if(f.ip !== 'all') badges.push({key:'ip', label:'ip: '+f.ip});
+    if(f.search) badges.push({key:'search', label:'"'+f.search+'"'});
+    els.activeFilters.innerHTML = badges.map(b =>
+      `<span class="filter-badge">${esc(b.label)}<span class="remove" data-remove="${b.key}">&times;</span></span>`
+    ).join('');
+    els.activeFilters.querySelectorAll('[data-remove]').forEach(x => {
+      x.addEventListener('click', () => {
+        const key = x.getAttribute('data-remove');
+        if(key === 'type') els.typeFilter.value = 'all';
+        if(key === 'status') els.statusFilter.value = 'all';
+        if(key === 'ip') els.ipFilter.value = 'all';
+        if(key === 'search') els.searchInput.value = '';
+        syncFiltersFromInputs();
+      });
+    });
+  }
+
+  function syncFiltersFromInputs(){
+    state.filters.search = els.searchInput.value;
+    state.filters.type = els.typeFilter.value;
+    state.filters.status = els.statusFilter.value;
+    state.filters.ip = els.ipFilter.value;
+    state.filters.sort = els.sortFilter.value;
+    renderCenter();
+    updateActiveFilterBadges();
+  }
+
+  // ============================================
+  // RENDER: left rail (threat score handled separately via /api/patterns)
+  // ============================================
+  function renderMetrics(){
+    let failed=0, success=0, cmds=0;
+    for(const l of state.logs){
+      if(l.type === 'auth'){ if(l.status==='SUCCESS') success++; else failed++; }
+      else if(l.type === 'command') cmds++;
+    }
+    els.mUnique.textContent = state.attackers.size;
+    els.mFailed.textContent = failed;
+    els.mSuccess.textContent = success;
+    els.mCmds.textContent = cmds;
+  }
+
+  function renderThreat(patterns){
+    if(!patterns) return;
+    const score = patterns.attack_score || 0;
+    els.threatScore.textContent = score;
+    els.gaugeFill.style.width = score + '%';
+    els.gaugeFill.style.background = score >= 70 ? 'var(--red)' : score >= 35 ? 'var(--amber)' : 'var(--teal)';
+    els.threatSub.textContent = score >= 70 ? 'high volume of hostile probing'
+                               : score >= 35 ? 'sustained probing activity'
+                               : score > 0   ? 'low-level scanning'
+                               : 'no significant activity';
+    const at = patterns.attack_types || {};
+    els.sBrute.textContent = at.bruteforce || 0;
+    els.sSpray.textContent = at.password_spray || 0;
+    els.sDict.textContent = at.dictionary || 0;
+    els.sCountries.textContent = Object.keys(patterns.geo_distribution || {}).length;
+  }
+
   function renderSourceTable(){
     let list = Array.from(state.attackers.values());
-    list.sort((a,b) => {
-      if(state.sortMode === 'attempts') return b.attempts - a.attempts;
-      if(state.sortMode === 'commands') return b.commands - a.commands;
-      return new Date(b.lastSeen) - new Date(a.lastSeen);
-    });
+    list.sort((a,b) => b.attempts - a.attempts);
     els.sourceCount.textContent = list.length;
     if(list.length === 0){
       els.attackerRows.innerHTML = `<tr><td colspan="4" style="padding:24px 12px;color:var(--text-faint);text-align:center;">No attackers yet.</td></tr>`;
       return;
     }
     els.attackerRows.innerHTML = list.map(a => {
-      const p = pattern(a);
       const geo = a.geo || {};
       const flag = geo.flag || '\ud83c\udf10';
       const hot = a.failed >= 8 ? 'hot' : '';
-      const breached = a.breached ? ' &#9888;' : '';
+      const breached = a.breached ? ' \u26a0' : '';
+      const bf = state.bruteforceIPs.has(a.ip) ? ' \u26a1' : '';
       return `<tr data-ip="${esc(a.ip)}" class="${state.selectedIp===a.ip?'sel':''}">
         <td>
           <div class="ip-cell">
             <span class="flag">${flag}</span>
             <div>
-              <div class="ip-mono">${esc(a.ip)}${breached}</div>
+              <div class="ip-mono">${esc(a.ip)}${breached}${bf}</div>
               <div class="geo-sub">${esc(geo.country || 'Unknown')}</div>
             </div>
           </div>
@@ -659,18 +868,99 @@
       tr.addEventListener('click', () => selectAttacker(tr.getAttribute('data-ip')));
     });
   }
+
+  // ============================================
+  // RENDER: center pane (combined feed OR split view), filtered
+  // ============================================
+  function renderCenter(){
+    const logs = getFilteredLogs();
+    if(state.activeView === 'combined') renderCombined(logs);
+    else renderSplit(logs);
+  }
+
+  function renderCombined(logs){
+    if(logs.length === 0){
+      els.liveFeed.innerHTML = `<div class="empty-hint">No entries match the current filters.</div>`;
+      return;
+    }
+    let html = '';
+    logs.forEach(e => {
+      let cls = 'tick';
+      const flag = (e.geo && e.geo.flag) || '\ud83c\udf10';
+      const bf = state.bruteforceIPs.has(e.ip) && e.type === 'auth' && e.status !== 'SUCCESS';
+      if(bf) cls += ' bruteforce';
+      let content;
+      if(e.type === 'auth'){
+        cls += e.status === 'SUCCESS' ? ' ok' : ' fail';
+        const verb = e.status === 'SUCCESS' ? 'authenticated as' : 'tried';
+        const badge = e.status === 'SUCCESS' ? 'success' : 'fail';
+        content = `<span class="t">${fmtTime(e.timestamp)}</span><span class="flag">${flag}</span>
+          <span class="m"><b class="ip-link" data-ip="${esc(e.ip)}">${esc(e.ip)}</b> ${verb} <b class="st">${esc(e.username)}</b></span>
+          <span class="badge-mini ${badge}">${e.status}</span>`;
+      } else {
+        cls += ' cmd';
+        const danger = isDangerous(e.command) ? '\u26a0 ' : '';
+        content = `<span class="t">${fmtTime(e.timestamp)}</span><span class="flag">${flag}</span>
+          <span class="m"><b class="ip-link" data-ip="${esc(e.ip)}">${esc(e.ip)}</b> ran <b class="st">${danger}${esc(e.command)}</b></span>
+          <span class="badge-mini cmd">cmd</span>`;
+      }
+      html += `<div class="${cls}">${content}</div>`;
+    });
+    els.liveFeed.innerHTML = html;
+    els.liveFeed.querySelectorAll('[data-ip]').forEach(el => el.addEventListener('click', () => selectAttacker(el.getAttribute('data-ip'))));
+  }
+
+  function renderSplit(logs){
+    const cmds = logs.filter(l => l.type === 'command');
+    const auths = logs.filter(l => l.type === 'auth');
+    els.cmdColCount.textContent = cmds.length;
+    els.authColCount.textContent = auths.length;
+
+    els.cmdCol.innerHTML = cmds.length === 0 ? '<div class="split-empty">No commands match.</div>' :
+      cmds.map(e => {
+        const flag = (e.geo && e.geo.flag) || '\ud83c\udf10';
+        const danger = isDangerous(e.command) ? '\u26a0 ' : '';
+        return `<div class="tick cmd"><span class="t">${fmtTime(e.timestamp)}</span><span class="flag">${flag}</span>
+          <span class="m"><b class="ip-link" data-ip="${esc(e.ip)}">${esc(e.ip)}</b> ran <b class="st">${danger}${esc(e.command)}</b></span></div>`;
+      }).join('');
+
+    els.authCol.innerHTML = auths.length === 0 ? '<div class="split-empty">No auth attempts match.</div>' :
+      auths.map(e => {
+        const flag = (e.geo && e.geo.flag) || '\ud83c\udf10';
+        const bf = state.bruteforceIPs.has(e.ip) && e.status !== 'SUCCESS';
+        const cls = 'tick ' + (e.status === 'SUCCESS' ? 'ok' : 'fail') + (bf ? ' bruteforce' : '');
+        const verb = e.status === 'SUCCESS' ? 'authenticated as' : 'tried';
+        const badge = e.status === 'SUCCESS' ? 'success' : 'fail';
+        return `<div class="${cls}"><span class="t">${fmtTime(e.timestamp)}</span><span class="flag">${flag}</span>
+          <span class="m"><b class="ip-link" data-ip="${esc(e.ip)}">${esc(e.ip)}</b> ${verb} <b class="st">${esc(e.username)}</b></span>
+          <span class="badge-mini ${badge}">${e.status}</span></div>`;
+      }).join('');
+
+    els.cmdCol.querySelectorAll('[data-ip]').forEach(el => el.addEventListener('click', () => selectAttacker(el.getAttribute('data-ip'))));
+    els.authCol.querySelectorAll('[data-ip]').forEach(el => el.addEventListener('click', () => selectAttacker(el.getAttribute('data-ip'))));
+  }
+
+  function switchView(view){
+    state.activeView = view;
+    document.querySelectorAll('.view-tab').forEach(t => t.classList.toggle('active', t.getAttribute('data-view') === view));
+    els.viewCombined.classList.toggle('hidden', view !== 'combined');
+    els.viewSplit.classList.toggle('hidden', view !== 'split');
+    renderCenter();
+  }
+
+  // ============================================
+  // DRAWER (session detail) - unchanged behavior, kept from map/replay version
+  // ============================================
   function selectAttacker(ip){
     state.selectedIp = ip;
     renderSourceTable();
     renderDrawer();
   }
+
   function renderDrawer(){
     const a = state.attackers.get(state.selectedIp);
     if(!a){
-      els.drawer.innerHTML = `<div class="drawer-empty">
-        Select a source from the left<br/>
-        to inspect its full session.
-      </div>`;
+      els.drawer.innerHTML = `<div class="drawer-empty">Select a source from the left<br/>to inspect its full session.</div>`;
       return;
     }
     const p = pattern(a);
@@ -678,17 +968,16 @@
     const flag = geo.flag || '\ud83c\udf10';
     const loc = [geo.city, geo.region, geo.country].filter(Boolean).join(', ') || 'Unknown location';
     const isp = geo.isp || geo.org || '';
-    const creds = Array.from(a.usernames.entries())
-      .sort((x,y)=>y[1]-x[1]).slice(0,12)
+    const creds = Array.from(a.usernames.entries()).sort((x,y)=>y[1]-x[1]).slice(0,12)
       .map(([u,c]) => `<div class="cred-row"><span class="pair"><b>${esc(u)}</b> &times; ${c}</span></div>`)
       .join('') || '<div style="color:var(--text-faint);font-size:11.5px">No credentials logged.</div>';
-    const pwList = Array.from(a.passwords.entries())
-      .sort((x,y)=>y[1]-x[1]).slice(0,12)
+    const pwList = Array.from(a.passwords.entries()).sort((x,y)=>y[1]-x[1]).slice(0,12)
       .map(([pw,c]) => `<div class="cred-row"><span class="pair">&bull; <b>${esc(pw)}</b></span><span class="pair">${c}&times;</span></div>`)
       .join('') || '<div style="color:var(--text-faint);font-size:11.5px">No passwords logged.</div>';
     const cmds = a.cmdList.slice(-30).reverse()
       .map(c => `<div class="cmd-line ${c.dangerous?'danger':''}">${c.dangerous?'&#9888; ':'$ '}<b>${esc(c.cmd)}</b></div>`)
       .join('') || '<div style="color:var(--text-faint);font-size:11.5px">No commands executed.</div>';
+
     els.drawer.innerHTML = `
       <div class="drawer-head">
         <div class="drawer-ip">${flag} ${esc(a.ip)}</div>
@@ -696,6 +985,7 @@
         <div class="drawer-badges">
           <span class="badge ${p}">${patternLabel[p]}</span>
           ${a.breached ? '<span class="badge brute">breached</span>' : ''}
+          ${state.bruteforceIPs.has(a.ip) ? '<span class="badge brute">active brute-force</span>' : ''}
         </div>
         <div class="drawer-actions">
           <button class="btn" id="blockBtn">block this ip</button>
@@ -728,17 +1018,12 @@
         <div id="cmdListStatic">${cmds}</div>
       </div>
     `;
-
     const blockBtn = document.getElementById('blockBtn');
     if(blockBtn) blockBtn.addEventListener('click', (e) => showBlockFlyout(e.currentTarget, a.ip));
-
     const replayBtn = document.getElementById('replayBtn');
     if(replayBtn) replayBtn.addEventListener('click', () => startReplay(a));
   }
 
-  // ============================================
-  // BLOCKLIST HELPER (copy-paste command, not a real firewall action)
-  // ============================================
   function showBlockFlyout(anchor, ip){
     document.querySelectorAll('.block-flyout').forEach(f => f.remove());
     const rect = anchor.getBoundingClientRect();
@@ -773,17 +1058,11 @@
     document.getElementById('flyClose').addEventListener('click', () => fly.remove());
     setTimeout(() => {
       document.addEventListener('click', function onDoc(ev){
-        if(!fly.contains(ev.target) && ev.target !== anchor){
-          fly.remove();
-          document.removeEventListener('click', onDoc);
-        }
+        if(!fly.contains(ev.target) && ev.target !== anchor){ fly.remove(); document.removeEventListener('click', onDoc); }
       });
     }, 10);
   }
 
-  // ============================================
-  // SESSION REPLAY - steps through a session's commands like a terminal
-  // ============================================
   function startReplay(a){
     if(state.replayTimer) clearInterval(state.replayTimer);
     const term = document.getElementById('replayTerm');
@@ -792,21 +1071,15 @@
     const staticList = document.getElementById('cmdListStatic');
     const pauseBtn = document.getElementById('replayPauseBtn');
     if(!term || !a.cmdList.length) return;
-
     const cmds = a.cmdList.slice();
-    term.style.display = 'block';
-    bar.style.display = 'flex';
-    staticList.style.display = 'none';
-    term.innerHTML = '';
-    state.replaying = true;
-
+    term.style.display = 'block'; bar.style.display = 'flex'; staticList.style.display = 'none';
+    term.innerHTML = ''; state.replaying = true;
     let i = 0;
     function typeNext(){
       if(i >= cmds.length){
         term.innerHTML += `\n<span class="prompt">[session ended]</span>`;
         term.scrollTop = term.scrollHeight;
-        state.replaying = false;
-        clearInterval(state.replayTimer);
+        state.replaying = false; clearInterval(state.replayTimer);
         return;
       }
       const c = cmds[i];
@@ -817,7 +1090,6 @@
     }
     typeNext();
     state.replayTimer = setInterval(() => { if(state.replaying) typeNext(); }, 700);
-
     pauseBtn.addEventListener('click', () => {
       state.replaying = !state.replaying;
       pauseBtn.textContent = state.replaying ? 'pause' : 'resume';
@@ -825,213 +1097,129 @@
   }
 
   // ============================================
-  // MAP (equirectangular dot-plot, no external tiles/deps)
+  // CLEAR LOGS (with real confirmation, and a real server-side clear)
   // ============================================
-  const MAP_W = 720, MAP_H = 360;
-  function geoToXY(lat, lon){
-    const x = (lon + 180) / 360 * MAP_W;
-    const y = (90 - lat) / 180 * MAP_H;
-    return [x, y];
-  }
-  let mapBuilt = false;
-  function renderMap(){
-    const withGeo = Array.from(state.attackers.values()).filter(a => a.geo && a.geo.lat && a.geo.lon);
-    if(withGeo.length === 0){
-      els.mapWrap.innerHTML = '<div class="map-empty">No geolocated attackers yet.</div>';
-      mapBuilt = false;
-      return;
-    }
-    if(!mapBuilt){
-      // simple continent-outline hint via a light graticule; avoids depending on external map tiles/GeoJSON
-      let svg = `<svg viewBox="0 0 ${MAP_W} ${MAP_H}" preserveAspectRatio="xMidYMid meet">`;
-      svg += `<rect x="0" y="0" width="${MAP_W}" height="${MAP_H}" fill="var(--surface)"/>`;
-      for(let lon=-180; lon<=180; lon+=30){
-        const [x] = geoToXY(0, lon);
-        svg += `<line x1="${x}" y1="0" x2="${x}" y2="${MAP_H}" stroke="var(--line-lite)" stroke-width="0.5"/>`;
+  function clearLogs(){
+    showConfirm(
+      'Clear all logs?',
+      'This clears the dashboard\'s local view and the server\'s in-memory log cache. It does <b>not</b> delete <code>honeypot.log</code> on disk. This cannot be undone.',
+      async () => {
+        processedIds.clear();
+        state.logs = [];
+        state.attackers.clear();
+        state.totalAdded = 0;
+        state.totalDuplicates = 0;
+        state.selectedIp = null;
+        state.bruteforceIPs.clear();
+        state.alertedBreaches.clear();
+        state.notifiedIPs.clear();
+        state.notifyTimestamps = {};
+        state.bruteWindowStarts.clear();
+        clearPersisted();
+        renderMetrics(); renderSourceTable(); renderCenter(); renderDrawer(); updateIPSelector(); updateActiveFilterBadges();
+        els.lastEvent.textContent = 'logs cleared';
+        try{ await fetch('/api/clear-cache'); }catch(e){ /* server cache clear is best-effort */ }
       }
-      for(let lat=-60; lat<=60; lat+=30){
-        const [,y] = geoToXY(lat, 0);
-        svg += `<line x1="0" y1="${y}" x2="${MAP_W}" y2="${y}" stroke="var(--line-lite)" stroke-width="0.5"/>`;
-      }
-      svg += `<g id="mapDots"></g>`;
-      svg += `</svg>`;
-      els.mapWrap.innerHTML = svg + `<div class="map-legend">
-        <span><i class="sw" style="background:var(--amber)"></i>probed</span>
-        <span><i class="sw" style="background:var(--red)"></i>breached</span>
-      </div>`;
-      mapBuilt = true;
-    }
-    const dotsGroup = els.mapWrap.querySelector('#mapDots');
-    if(!dotsGroup) return;
-    dotsGroup.innerHTML = withGeo.map(a => {
-      const [x,y] = geoToXY(a.geo.lat, a.geo.lon);
-      const r = Math.min(3 + Math.sqrt(a.attempts), 12);
-      const title = `${esc(a.ip)} - ${esc(a.geo.city||'')}, ${esc(a.geo.country||'')} (${a.attempts} attempts)`;
-      return `<circle class="map-dot ${a.breached?'breach':''}" cx="${x}" cy="${y}" r="${r}" data-ip="${esc(a.ip)}"><title>${title}</title></circle>`;
-    }).join('');
-    dotsGroup.querySelectorAll('circle').forEach(c => {
-      c.addEventListener('click', () => selectAttacker(c.getAttribute('data-ip')));
-    });
+    );
   }
 
-  function switchView(view){
-    state.activeView = view;
-    document.querySelectorAll('.view-tab').forEach(t => t.classList.toggle('active', t.getAttribute('data-view') === view));
-    els.viewFeed.classList.toggle('hidden', view !== 'feed');
-    els.viewMap.classList.toggle('hidden', view !== 'map');
-    if(view === 'map') renderMap();
-  }
-
-  function renderMetrics(){
-    let failed=0, success=0, cmds=0;
-    for(const l of state.logs){
-      if(l.type === 'auth'){ if(l.status==='SUCCESS') success++; else failed++; }
-      else if(l.type === 'command') cmds++;
-    }
-    els.mUnique.textContent = state.attackers.size;
-    els.mFailed.textContent = failed;
-    els.mSuccess.textContent = success;
-    els.mCmds.textContent = cmds;
-  }
-  function renderThreat(patterns){
-    if(!patterns) return;
-    const score = patterns.attack_score || 0;
-    els.threatScore.textContent = score;
-    els.gaugeFill.style.width = score + '%';
-    els.gaugeFill.style.background = score >= 70 ? 'var(--red)' : score >= 35 ? 'var(--amber)' : 'var(--teal)';
-    els.threatSub.textContent = score >= 70 ? 'high volume of hostile probing'
-                               : score >= 35 ? 'sustained probing activity'
-                               : score > 0   ? 'low-level scanning'
-                               : 'no significant activity';
-    const at = patterns.attack_types || {};
-    els.sBrute.textContent = at.bruteforce || 0;
-    els.sSpray.textContent = at.password_spray || 0;
-    els.sDict.textContent = at.dictionary || 0;
-    els.sCountries.textContent = Object.keys(patterns.geo_distribution || {}).length;
-  }
+  // ============================================
+  // LOAD & STREAM
+  // ============================================
   async function loadInitial(){
-    // restore whatever we had persisted from a previous page load first,
-    // so a refresh doesn't lose everything while the server fetch is in flight
     const persisted = loadPersisted();
     try{
       const res = await fetch('/api/logs?limit=1000');
       const serverLogs = await res.json();
-      // merge: persisted history + fresh server logs, de-duplicated by ingest() itself
-      const combined = persisted.concat(serverLogs);
+      const usablePersisted = reconcilePersisted(persisted, serverLogs);
+      const combined = usablePersisted.concat(serverLogs);
 
       processedIds.clear();
-      seenLiveIds.clear();
-      state.liveEntries = [];
       state.logs = [];
       state.attackers.clear();
       state.totalAdded = 0;
       state.totalDuplicates = 0;
-
       combined.forEach(entry => ingest(entry, false));
-      state.initialLoadComplete = true;
-      combined.forEach(entry => {
-        const logId = getLogId(entry);
-        if (!seenLiveIds.has(logId)) {
-          seenLiveIds.add(logId);
-          state.liveEntries.push(entry);
-        }
-      });
-      if (state.liveEntries.length > state.maxLiveEntries) {
-        state.liveEntries = state.liveEntries.slice(-state.maxLiveEntries);
-      }
-      renderMetrics();
-      renderSourceTable();
-      renderLiveFeed();
+
+      detectBruteforce();
+      renderMetrics(); renderSourceTable(); updateIPSelector(); renderCenter();
       saveState();
       els.lastEvent.textContent = combined.length ? (`loaded ${state.totalAdded} unique events` + (state.totalDuplicates > 0 ? ` (${state.totalDuplicates} duplicates skipped)` : '')) : 'no events yet';
-      els.dupStats.textContent = state.totalDuplicates > 0 ? `${state.totalDuplicates} dup` : '';
     }catch(e){
-      // server fetch failed - fall back to whatever was persisted so the page isn't empty
       if(persisted.length){
         persisted.forEach(entry => ingest(entry, false));
-        state.initialLoadComplete = true;
-        renderMetrics();
-        renderSourceTable();
-        renderLiveFeed();
+        detectBruteforce();
+        renderMetrics(); renderSourceTable(); updateIPSelector(); renderCenter();
       }
       els.lastEvent.textContent = 'failed to load logs from server' + (persisted.length ? ' (showing cached data)' : '');
     }
     refreshPatterns();
   }
+
   async function refreshPatterns(){
     try{
       const res = await fetch('/api/patterns');
-      const patterns = await res.json();
-      renderThreat(patterns);
+      renderThreat(await res.json());
     }catch(e){}
   }
+
   function connectStream(){
     const src = new EventSource('/api/stream');
-    let streamActive = false;
-    src.onopen = () => {
-      els.liveDot.classList.add('live');
-      els.connState.textContent = 'connected';
-      streamActive = true;
-    };
-    src.onerror = () => {
-      els.liveDot.classList.remove('live');
-      els.connState.textContent = 'reconnecting\u2026';
-      streamActive = false;
-    };
+    src.onopen = () => { els.liveDot.classList.add('live'); els.connState.textContent = 'connected'; };
+    src.onerror = () => { els.liveDot.classList.remove('live'); els.connState.textContent = 'reconnecting\u2026'; };
     src.onmessage = (ev) => {
-      if(state.paused || !streamActive) return;
+      if(state.paused) return;
       try{
         const data = JSON.parse(ev.data);
         if(data && data.type === 'connected') return;
         const arr = Array.isArray(data) ? data : [data];
         let newCount = 0;
-        arr.forEach(entry => {
-          const before = state.totalAdded;
-          ingest(entry, true);
-          if (state.totalAdded > before) newCount++;
-        });
-        if (newCount > 0) {
-          renderMetrics();
-          renderSourceTable();
-          renderLiveFeed();
-          if(state.activeView === 'map') renderMap();
+        arr.forEach(entry => { if(ingest(entry, true)) newCount++; });
+        if(newCount > 0){
+          detectBruteforce();
+          renderMetrics(); renderSourceTable(); updateIPSelector(); renderCenter();
           if(state.selectedIp && !state.replaying) renderDrawer();
-          els.lastEvent.textContent = `+${newCount} new events (${state.totalDuplicates} total dup)`;
-          els.dupStats.textContent = state.totalDuplicates > 0 ? `${state.totalDuplicates} dup` : '';
+          els.lastEvent.textContent = `+${newCount} new events`;
           saveState();
         }
       }catch(e){}
     };
   }
-  els.liveSearch.addEventListener('input', (e) => {
-    state.liveFilter = e.target.value;
-    els.liveFilterBadge.textContent = state.liveFilter ? `filter: "${state.liveFilter}"` : 'all';
-    renderLiveFeed();
+
+  // ============================================
+  // EVENT LISTENERS
+  // ============================================
+  document.querySelectorAll('.view-tab').forEach(tab => {
+    tab.addEventListener('click', () => switchView(tab.getAttribute('data-view')));
   });
-  els.clearFeed.addEventListener('click', () => {
-    state.liveEntries = [];
-    seenLiveIds.clear();
-    renderLiveFeed();
+  [els.searchInput, els.typeFilter, els.statusFilter, els.ipFilter, els.sortFilter].forEach(el => {
+    const evt = el.tagName === 'INPUT' ? 'input' : 'change';
+    el.addEventListener(evt, syncFiltersFromInputs);
   });
+  els.clearFiltersBtn.addEventListener('click', () => {
+    els.searchInput.value = ''; els.typeFilter.value = 'all'; els.statusFilter.value = 'all';
+    els.ipFilter.value = 'all'; els.sortFilter.value = 'newest';
+    syncFiltersFromInputs();
+  });
+  els.statBrute.addEventListener('click', () => { els.statusFilter.value = 'FAILED'; syncFiltersFromInputs(); });
+  els.statSpray.addEventListener('click', () => { els.statusFilter.value = 'FAILED'; syncFiltersFromInputs(); });
+  els.statDict.addEventListener('click', () => { els.statusFilter.value = 'FAILED'; syncFiltersFromInputs(); });
   els.pauseBtn.addEventListener('click', () => {
     state.paused = !state.paused;
     els.pauseBtn.textContent = state.paused ? 'resume' : 'pause';
     els.pauseBtn.classList.toggle('active', state.paused);
   });
-  els.exportCsv.addEventListener('click', () => {
-    window.location.href = '/api/export?format=csv&limit=2000';
-  });
-  document.querySelectorAll('.view-tab').forEach(tab => {
-    tab.addEventListener('click', () => switchView(tab.getAttribute('data-view')));
-  });
-  // ask for notification permission on first click anywhere (browsers block silent auto-requests)
+  els.exportCsv.addEventListener('click', () => { window.location.href = '/api/export?format=csv&limit=2000'; });
+  els.clearBtn.addEventListener('click', clearLogs);
   document.addEventListener('click', requestNotifyPermission, { once: true });
+
   function tickClock(){
     els.clock.textContent = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
   }
-  setInterval(tickClock, 1000);
-  tickClock();
+  setInterval(tickClock, 1000); tickClock();
   setInterval(refreshPatterns, 15000);
+  setInterval(() => { detectBruteforce(); updateIPSelector(); renderSourceTable(); }, 30000);
+
   loadInitial();
   connectStream();
 })();

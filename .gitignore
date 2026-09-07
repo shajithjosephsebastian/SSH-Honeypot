@@ -17,6 +17,7 @@ web_output.log
 honeypot_output.log
 host_rsa_key
 host_rsa_key.pub
+update_github.bat
 
 # OS / editor
 .DS_Store

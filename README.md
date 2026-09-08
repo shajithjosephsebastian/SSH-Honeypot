@@ -129,6 +129,8 @@ A fixed list of common weak username/password pairs (`root:password123`,
 | `GET /api/export?format=csv` | Export logs as CSV. |
 | `GET /api/clear-cache` | Clears the server's in-memory log cache (does not touch `honeypot.log` on disk). |
 
+![Dashboard overview gif](docs/demo.gif)
+
 ## What I learned / how it was built
 
 This started as a fairly simple fake-SSH-server script and grew into a

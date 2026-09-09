@@ -57,7 +57,7 @@ Built as a hands-on cybersecurity project to learn about **SSH, honeypots, loggi
 * Linux recommended
 * No root privileges required when using the default port `2222`
 
-## Installation
+## Installation & Usage
 
 Clone the repository:
 
@@ -66,26 +66,46 @@ git clone https://github.com/shajithjosephsebastian/SSH-Honeypot.git
 cd SSH-Honeypot
 ```
 
-Create a virtual environment:
+### Quick Start
+
+The easiest way to run the project is with the included `run.sh` script.
+
+```bash
+./run.sh
+```
+
+The script handles the setup automatically:
+
+* Creates the Python virtual environment
+* Installs the required dependencies
+* Checks the required ports
+* Starts the SSH honeypot
+* Starts the Flask web dashboard
+
+You don't need to manually create the virtual environment or run
+`pip install` when using `run.sh`.
+
+Once started, the honeypot uses:
+
+```text
+SSH Honeypot: 2222
+Dashboard:    5000
+```
+
+Open the dashboard in your browser:
+
+```text
+http://localhost:5000
+```
+
+### Manual Setup
+
+If you prefer to run the components separately, you can set them up manually:
 
 ```bash
 python3 -m venv honeypot-env
 source honeypot-env/bin/activate
-```
-
-Install the dependencies:
-
-```bash
 pip install -r requirements.txt
-```
-
-## Running the Honeypot
-
-The default configuration uses:
-
-```text
-Honeypot SSH: 2222
-Dashboard:    5000
 ```
 
 Start the honeypot:
@@ -94,47 +114,38 @@ Start the honeypot:
 python3 honeypot.py
 ```
 
-In another terminal, start the dashboard:
+In another terminal, activate the virtual environment and start the dashboard:
 
 ```bash
+source honeypot-env/bin/activate
 python3 interface.py
 ```
 
-Open the dashboard:
+The dashboard will be available at:
 
 ```text
 http://localhost:5000
 ```
 
-You can also use the included launcher:
-
-```bash
-./run.sh
-```
-
 ## Testing the Honeypot
 
-From the same machine:
+With the honeypot running on the default port `2222`:
 
 ```bash
 ssh -p 2222 root@localhost
 ```
 
-Try an incorrect password first, followed by one of the accepted decoy credentials.
+Try an incorrect password first, followed by one of the accepted decoy
+credentials.
 
-The available credentials can be found in:
+The available credentials can be found in `FAKE_USERS` inside:
 
 ```text
 honeypot.py
 ```
 
-Look for:
-
-```python
-FAKE_USERS
-```
-
-All credentials are intentionally fake and should only be used for the honeypot.
+All credentials are intentionally fake and should only be used by the
+honeypot.
 
 ---
 

@@ -391,18 +391,14 @@ SSH-Honeypot/
 ├── templates/
 │   └── index.html           # Web dashboard
 │
-├── docs/
-│   └── demo.gif             # Dashboard demonstration
-│
 ├── run.sh                   # Setup and launcher script
 ├── requirements.txt         # Python dependencies
-├── .gitignore               # Ignored files
 └── README.md                # Project documentation
 ```
 
 ### Runtime files
 
-These files may be created while running the project and should **not** be committed:
+These files may be created while running the project
 
 ```text
 honeypot.log
@@ -410,8 +406,6 @@ honeypot_host_key.pem
 honeypot-env/
 __pycache__/
 ```
-
-Make sure they are included in `.gitignore`.
 
 ## Disclaimer
 
